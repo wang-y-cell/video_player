@@ -1,5 +1,6 @@
 #include <SDL3/SDL.h>
 #include <queue>
+#include <iostream>
 #include <memory>
 #include <condition_variable>
 #include <string>
@@ -97,5 +98,8 @@ int main(int argc, char* argv[]) {
         //根据窗口生成渲染器
         renderer.reset(SDL_CreateRenderer(win.get(), nullptr));
     }
+
+    //测试窗口
+    std::cin.get();
 
 }

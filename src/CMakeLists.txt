@@ -1,11 +1,9 @@
-set(SDL_INCLUDE_DIR /usr/local/include)
-set(SDL_LIB_DIR /usr/local/lib)
-
 set(filename main.cpp)
 
 set(FILE_NAME ${CMAKE_CURRENT_SOURCE_DIR}/${filename})
 
 find_package(FFmpeg REQUIRED COMPONENTS avformat avcodec avutil swscale swresample)
+find_package(SDL3 REQUIRED)
 
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
@@ -14,9 +12,9 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/include/Outputs
     ${CMAKE_SOURCE_DIR}/include/Utils
     ${FFmpeg_INCLUDE_DIRS}
-    ${SDL_INCLUDE_DIR})
+    ${SDL3_INCLUDE_DIRS})
 
-link_directories(${SDL_LIB_DIR} ${FFmpeg_LIBRARY_DIRS})
+link_directories(${SDL3_LIBRARY_DIRS} ${FFmpeg_LIBRARY_DIRS})
 
 get_filename_component(TARGET_NAME ${FILE_NAME} NAME_WE)
 
@@ -24,7 +22,7 @@ add_executable(${TARGET_NAME} ${FILE_NAME})
 
 target_link_libraries(
     ${TARGET_NAME}
-    SDL3
+    SDL3::SDL3
     ${FFmpeg_LIBRARIES}
 )
 

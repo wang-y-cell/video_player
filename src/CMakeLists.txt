@@ -7,7 +7,7 @@ set(filename main.cpp)
 
 set(FILE_NAME ${CMAKE_CURRENT_SOURCE_DIR}/${filename})
 
-include_directories(${FFMPEG_INCLUDE_DIR} ${SDL_INCLUDE_DIR})
+include_directories(${CMAKE_SOURCE_DIR}/include ${FFMPEG_INCLUDE_DIR} ${SDL_INCLUDE_DIR})
 
 link_directories(${FFMPEG_LIB_DIR} ${SDL_LIB_DIR})
 
@@ -26,3 +26,6 @@ target_link_libraries(
 )
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
+
+find_package(Threads REQUIRED)
+target_link_libraries(${TARGET_NAME} Threads::Threads)

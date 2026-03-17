@@ -15,6 +15,7 @@ public:
     SDL3Output() = default;
     ~SDL3Output() override { destroy(); }
 
+    //确保视频窗口的初始化
     bool ensureInit(int w, int h) override {
         if (renderer_) {
             return true;
@@ -38,6 +39,7 @@ public:
         return true;
     }
 
+    //渲染纹理,并播放
     void render(const AVFrame* yuv420p) override {
         if (!yuv420p || !texture_ || !renderer_) {
             return;

@@ -13,7 +13,7 @@ public:
     ~Demuxer() override { close(); }
 
     bool open(const std::string& url) {
-        close();
+        close();    //将之前打开的上下文关闭,并初始化
         avformat_network_init();
 
         const int ret = avformat_open_input(&fmt_ctx_, url.c_str(), nullptr, nullptr);

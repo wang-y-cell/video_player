@@ -8,7 +8,7 @@ extern "C" {
 #include <libavutil/frame.h>
 }
 
-#include "./../Outputs/IVideoOutput.hpp"
+#include "IVideoOutput.hpp"
 
 class SDL3Output final : public IVideoOutput {
 public:

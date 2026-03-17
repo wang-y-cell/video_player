@@ -10,10 +10,10 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-#include "./../Core/FFmpegCommon.hpp"
-#include "./../Core/Mediator.hpp"
-#include "./../Core/SafeQueue.hpp"
-#include "./../Decoders/IDecoder.hpp"
+#include "FFmpegCommon.hpp"
+#include "Mediator.hpp"
+#include "SafeQueue.hpp"
+#include "IDecoder.hpp"
 
 struct VideoFrame {
     ff::FramePtr frame;

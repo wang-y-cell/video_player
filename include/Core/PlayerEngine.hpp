@@ -11,11 +11,11 @@
 #include "Demuxer.hpp"
 #include "Mediator.hpp"
 #include "SafeQueue.hpp"
-#include "./../Decoders/AudioDecoder.hpp"
-#include "./../Decoders/VideoDecoder.hpp"
-#include "./../Outputs/IVideoOutput.hpp"
-#include "./../Outputs/SDL3Output.hpp"
-#include "./../Utils/ThreadPool.hpp"
+#include "AudioDecoder.hpp"
+#include "VideoDecoder.hpp"
+#include "IVideoOutput.hpp"
+#include "SDL3Output.hpp"
+#include "ThreadPool.hpp"
 
 class PlayerEngine final : public Mediator {
 public:

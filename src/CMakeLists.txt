@@ -7,7 +7,14 @@ set(filename main.cpp)
 
 set(FILE_NAME ${CMAKE_CURRENT_SOURCE_DIR}/${filename})
 
-include_directories(${CMAKE_SOURCE_DIR}/include ${FFMPEG_INCLUDE_DIR} ${SDL_INCLUDE_DIR})
+include_directories(
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/Core
+    ${CMAKE_SOURCE_DIR}/include/Decoders
+    ${CMAKE_SOURCE_DIR}/include/Outputs
+    ${CMAKE_SOURCE_DIR}/include/Utils
+    ${FFMPEG_INCLUDE_DIR}
+    ${SDL_INCLUDE_DIR})
 
 link_directories(${FFMPEG_LIB_DIR} ${SDL_LIB_DIR})
 

@@ -12,11 +12,11 @@ extern "C" {
 #include <libswresample/swresample.h>
 }
 
-#include "./../Core/Clock.hpp"
-#include "./../Core/FFmpegCommon.hpp"
-#include "./../Core/Mediator.hpp"
-#include "./../Core/SafeQueue.hpp"
-#include "./../Decoders/IDecoder.hpp"
+#include "Clock.hpp"
+#include "FFmpegCommon.hpp"
+#include "Mediator.hpp"
+#include "SafeQueue.hpp"
+#include "IDecoder.hpp"
 
 class AudioDecoder final : public BaseComponent, public IDecoder {
 public:

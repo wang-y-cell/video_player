@@ -2,3 +2,4 @@ build.md
 bin/
 build/
 image.png
+.cache/

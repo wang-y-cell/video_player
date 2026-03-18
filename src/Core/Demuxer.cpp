@@ -50,6 +50,7 @@ void Demuxer::close() {
 
 void Demuxer::readLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::PacketPtr>& audio_packets, SafeQueue<ff::PacketPtr>& video_packets) {
     while (!abort_flag.load()) {
+        //生成一个pkt,用来装载压缩数据
         ff::PacketPtr pkt = ff::makePacket();
         const int ret = av_read_frame(fmt_ctx_, pkt.get());
         if (ret < 0) {

@@ -20,6 +20,7 @@ public:
     PlayerEngine(thread_pool& pool, std::unique_ptr<IVideoOutput> output);
     ~PlayerEngine() override;
 
+    //重置时钟,解封装文件,初始化视频编码器和音频编码器
     bool prepare(const std::string& url);
     bool play();
     void pause();
@@ -34,6 +35,7 @@ public:
     bool isPaused() const;
     const std::string& lastError() const;
 
+    //什么都没有
     void Notify(BaseComponent* sender, const std::string& event) override;
 
 private:

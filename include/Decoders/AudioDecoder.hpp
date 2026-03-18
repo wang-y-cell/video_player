@@ -21,7 +21,9 @@ public:
     AudioDecoder() = default;
     ~AudioDecoder() override;
 
+    //音频输出接口(SDL)
     void setOutput(std::unique_ptr<IAudioOutput> output);
+    
     bool init(AVFormatContext* fmt, int stream_index, AVRational time_base, Clock* clock);
     void setPaused(bool paused);
     void setSpeed(double speed);

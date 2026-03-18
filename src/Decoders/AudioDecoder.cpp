@@ -110,6 +110,7 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
         return false;
     }
 
+    //每秒输出的字节数
     bytes_per_second_ = out_rate_ * out_channels_ * av_get_bytes_per_sample(out_sample_fmt_);
     if (mediator_) {
         mediator_->Notify(this, "AudioReady");

@@ -3,3 +3,4 @@ bin/
 build/
 image.png
 .cache/
+.vscode/

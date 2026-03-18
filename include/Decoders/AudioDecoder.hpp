@@ -63,8 +63,25 @@ public:
         out_sample_fmt_ = AV_SAMPLE_FMT_S16;
 
         av_channel_layout_default(&out_ch_layout_, out_channels_);
-        ret = swr_alloc_set_opts2(&swr_ctx_, &out_ch_layout_, out_sample_fmt_, out_rate_, &codec_ctx_->ch_layout, codec_ctx_->sample_fmt,
-                                 codec_ctx_->sample_rate, 0, nullptr);
+
+        int in_rate = codec_ctx_->sample_rate;
+        if (in_rate <= 0) {
+            in_rate = st->codecpar->sample_rate;
+        }
+        if (in_rate <= 0) {
+            in_rate = out_rate_;
+        }
+
+        av_channel_layout_uninit(&in_ch_layout_);
+        if (codec_ctx_->ch_layout.nb_channels > 0) {
+            av_channel_layout_copy(&in_ch_layout_, &codec_ctx_->ch_layout);
+        } else if (st->codecpar->ch_layout.nb_channels > 0) {
+            av_channel_layout_copy(&in_ch_layout_, &st->codecpar->ch_layout);
+        } else {
+            av_channel_layout_default(&in_ch_layout_, out_channels_);
+        }
+
+        ret = swr_alloc_set_opts2(&swr_ctx_, &out_ch_layout_, out_sample_fmt_, out_rate_, &in_ch_layout_, codec_ctx_->sample_fmt, in_rate, 0, nullptr);
         if (ret < 0) {
             last_error_ = ff::errStr(ret);
             return false;
@@ -120,6 +137,7 @@ public:
             avcodec_free_context(&codec_ctx_);
         }
         av_channel_layout_uninit(&out_ch_layout_);
+        av_channel_layout_uninit(&in_ch_layout_);
         clock_ = nullptr;
         time_base_ = AVRational{0, 1};
         out_rate_ = 0;
@@ -199,6 +217,7 @@ private:
     SwrContext* swr_ctx_ = nullptr;
     AVRational time_base_{0, 1};
 
+    AVChannelLayout in_ch_layout_{};
     AVChannelLayout out_ch_layout_{};
     AVSampleFormat out_sample_fmt_ = AV_SAMPLE_FMT_S16;
     int out_rate_ = 0;

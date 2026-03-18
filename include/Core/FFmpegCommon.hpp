@@ -13,35 +13,21 @@ extern "C" {
 }
 
 namespace ff {
-inline std::string errStr(int err) {
-    char buf[AV_ERROR_MAX_STRING_SIZE] = {};
-    av_strerror(err, buf, sizeof(buf));
-    return std::string(buf);
-}
+
+std::string errStr(int err);
 
 struct PacketDeleter {
-    void operator()(AVPacket* p) const {
-        if (!p) {
-            return;
-        }
-        AVPacket* tmp = p;
-        av_packet_free(&tmp);
-    }
+    void operator()(AVPacket* p) const;
 };
 
 struct FrameDeleter {
-    void operator()(AVFrame* f) const {
-        if (!f) {
-            return;
-        }
-        AVFrame* tmp = f;
-        av_frame_free(&tmp);
-    }
+    void operator()(AVFrame* f) const;
 };
 
 using PacketPtr = std::shared_ptr<AVPacket>;
 using FramePtr = std::shared_ptr<AVFrame>;
 
-inline PacketPtr makePacket() { return PacketPtr(av_packet_alloc(), PacketDeleter{}); }
-inline FramePtr makeFrame() { return FramePtr(av_frame_alloc(), FrameDeleter{}); }
+PacketPtr makePacket();
+FramePtr makeFrame();
+
 }  // namespace ff

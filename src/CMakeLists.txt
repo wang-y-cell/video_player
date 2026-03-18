@@ -32,9 +32,11 @@ include_directories(
 
 link_directories(${SDL3_LIBRARY_DIRS} ${FFmpeg_LIBRARY_DIRS})
 
-get_filename_component(TARGET_NAME ${FILE_NAME} NAME_WE)
+get_filename_component(TARGET_NAME ${filename} NAME_WE)
 
-add_executable(${TARGET_NAME} ${FILE_NAME})
+file(GLOB_RECURSE SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
+
+add_executable(${TARGET_NAME} ${SRC_FILES})
 
 target_link_libraries(
     ${TARGET_NAME}

@@ -1,4 +1,5 @@
 #include "PlayerEngine.hpp"
+#include "SDL3Output.hpp"
 
 PlayerEngine::PlayerEngine(thread_pool& pool) : pool_(pool), video_output_(new SDL3Output()) {
     demuxer_.set_mediator(this);

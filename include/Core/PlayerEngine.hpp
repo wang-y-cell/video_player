@@ -2,9 +2,7 @@
 
 #include <SDL3/SDL.h>
 
-#include <algorithm>
 #include <atomic>
-#include <cstdint>
 #include <string>
 
 #include "Clock.hpp"
@@ -14,7 +12,6 @@
 #include "AudioDecoder.hpp"
 #include "VideoDecoder.hpp"
 #include "IVideoOutput.hpp"
-#include "SDL3Output.hpp"
 #include "ThreadPool.hpp"
 
 class PlayerEngine final : public Mediator {

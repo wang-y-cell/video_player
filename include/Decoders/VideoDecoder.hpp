@@ -1,10 +1,8 @@
 #pragma once
 
 #include <atomic>
-#include <chrono>
 #include <memory>
 #include <string>
-#include <thread>
 
 extern "C" {
 #include <libswscale/swscale.h>

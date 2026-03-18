@@ -1,8 +1,6 @@
 #pragma once
 
-#include <algorithm>
 #include <atomic>
-#include <cstdint>
 #include <string>
 
 #include <SDL3/SDL.h>

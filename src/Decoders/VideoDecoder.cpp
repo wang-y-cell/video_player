@@ -1,4 +1,5 @@
 #include "VideoDecoder.hpp"
+#include <thread>
 
 VideoDecoder::~VideoDecoder() {
     close();

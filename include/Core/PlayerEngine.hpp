@@ -25,6 +25,8 @@ public:
     void pause();
     void resume();
     void togglePause();
+    void setSpeed(double speed);
+    double getSpeed() const;
     void run();
     void stop();
 

@@ -11,9 +11,13 @@ public:
     void setAudioClock(double pts_seconds);
     double getAudioClock() const;
 
+    void setSpeed(double speed);
+    double getSpeed() const;
+
 private:
     static int64_t nowUs();
 
     std::atomic<double> audio_pts_seconds_{0.0};
     std::atomic<int64_t> last_update_us_{0};
+    std::atomic<double> speed_{1.0};
 };

@@ -1,7 +1,14 @@
 #include "AudioDecoder.hpp"
+#include <thread>
+#include <chrono>
+#include <algorithm>
 
 AudioDecoder::~AudioDecoder() {
     close();
+}
+
+void AudioDecoder::setOutput(std::unique_ptr<IAudioOutput> output) {
+    output_ = std::move(output);
 }
 
 bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_base, Clock* clock) {
@@ -79,29 +86,27 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
         in_sample_fmt = static_cast<enum AVSampleFormat>(st->codecpar->format);
     }
 
+    //分配重采样上下文
     ret = swr_alloc_set_opts2(&swr_ctx_, &out_ch_layout_, out_sample_fmt_, out_rate_, &in_ch_layout_, in_sample_fmt, in_rate, 0, nullptr);
     if (ret < 0) {
         last_error_ = ff::errStr(ret);
         return false;
     }
 
+    //初始化重采样上下文
     ret = swr_init(swr_ctx_);
     if (ret < 0) {
         last_error_ = ff::errStr(ret);
         return false;
     }
 
-    SDL_AudioSpec spec;
-    spec.format = SDL_AUDIO_S16;
-    spec.channels = out_channels_;
-    spec.freq = out_rate_;
-    sdl_stream_ = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
-    if (!sdl_stream_) {
-        last_error_ = SDL_GetError();
+    if (!output_) {
+        last_error_ = "audio output not set";
         return false;
     }
-    if (!SDL_ResumeAudioStreamDevice(sdl_stream_)) {
-        last_error_ = SDL_GetError();
+
+    if (!output_->init(out_rate_, out_channels_)) {
+        last_error_ = output_->lastError();
         return false;
     }
 
@@ -113,20 +118,24 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
 }
 
 void AudioDecoder::setPaused(bool paused) {
-    if (!sdl_stream_) {
-        return;
+    if (output_) {
+        if (paused) {
+            output_->pause();
+        } else {
+            output_->resume();
+        }
     }
-    if (paused) {
-        SDL_PauseAudioStreamDevice(sdl_stream_);
-    } else {
-        SDL_ResumeAudioStreamDevice(sdl_stream_);
+}
+
+void AudioDecoder::setSpeed(double speed) {
+    if (output_) {
+        output_->setSpeed(speed);
     }
 }
 
 void AudioDecoder::close() {
-    if (sdl_stream_) {
-        SDL_DestroyAudioStream(sdl_stream_);
-        sdl_stream_ = nullptr;
+    if (output_) {
+        output_->close();
     }
     if (swr_ctx_) {
         swr_free(&swr_ctx_);
@@ -187,17 +196,21 @@ void AudioDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
             const int out_samples = swr_convert(swr_ctx_, &out_data, max_out_samples, (const uint8_t**)frame->extended_data, frame->nb_samples);
             if (out_samples > 0) {
                 const int out_size = out_samples * out_channels_ * av_get_bytes_per_sample(out_sample_fmt_);
-                while (!abort_flag.load() && bytes_per_second_ > 0 &&
-                       SDL_GetAudioStreamAvailable(sdl_stream_) > (bytes_per_second_ * 2)) {
-                    SDL_Delay(10);
-                }
-                SDL_PutAudioStreamData(sdl_stream_, out_data, out_size);
+                
+                // Wait if buffer is too full to avoid overfilling
+                if (output_) {
+                    while (!abort_flag.load() && bytes_per_second_ > 0 &&
+                           output_->getQueuedSize() > (bytes_per_second_ * 2)) {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    }
+                    output_->write(out_data, out_size);
 
-                if (clock_) {
-                    const int buffered_bytes = SDL_GetAudioStreamAvailable(sdl_stream_);
-                    const double buffered_seconds =
-                        bytes_per_second_ > 0 ? static_cast<double>(buffered_bytes) / static_cast<double>(bytes_per_second_) : 0.0;
-                    clock_->setAudioClock(std::max(0.0, pts_seconds - buffered_seconds));
+                    if (clock_) {
+                        const int buffered_bytes = output_->getQueuedSize();
+                        const double buffered_seconds =
+                            bytes_per_second_ > 0 ? static_cast<double>(buffered_bytes) / static_cast<double>(bytes_per_second_) : 0.0;
+                        clock_->setAudioClock(std::max(0.0, pts_seconds - buffered_seconds));
+                    }
                 }
                 fallback_samples += out_samples;
             }

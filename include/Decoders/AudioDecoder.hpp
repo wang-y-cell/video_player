@@ -2,8 +2,7 @@
 
 #include <atomic>
 #include <string>
-
-#include <SDL3/SDL.h>
+#include <memory>
 
 extern "C" {
 #include <libavutil/channel_layout.h>
@@ -15,20 +14,24 @@ extern "C" {
 #include "Mediator.hpp"
 #include "SafeQueue.hpp"
 #include "IDecoder.hpp"
+#include "IAudioOutput.hpp"
 
 class AudioDecoder final : public BaseComponent, public IDecoder {
 public:
     AudioDecoder() = default;
     ~AudioDecoder() override;
 
+    void setOutput(std::unique_ptr<IAudioOutput> output);
     bool init(AVFormatContext* fmt, int stream_index, AVRational time_base, Clock* clock);
     void setPaused(bool paused);
+    void setSpeed(double speed);
     void close() override;
     void decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::PacketPtr>& packets);
 
     const std::string& lastError() const override;
 
 private:
+    std::unique_ptr<IAudioOutput> output_;
     AVCodecContext* codec_ctx_ = nullptr;
     SwrContext* swr_ctx_ = nullptr;
     AVRational time_base_{0, 1};
@@ -40,7 +43,6 @@ private:
     int out_channels_ = 0;
     int bytes_per_second_ = 0;
 
-    SDL_AudioStream* sdl_stream_ = nullptr;
     Clock* clock_ = nullptr;
     std::string last_error_;
 };

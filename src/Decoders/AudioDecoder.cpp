@@ -38,13 +38,18 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
         last_error_ = ff::errStr(ret);
         return false;
     }
-
+    
+    //设置输出采样率
     out_rate_ = codec_ctx_->sample_rate > 0 ? codec_ctx_->sample_rate : 48000;
+    //设置输出声道数
     out_channels_ = codec_ctx_->ch_layout.nb_channels > 0 ? codec_ctx_->ch_layout.nb_channels : 2;
+    //设置样本格式
     out_sample_fmt_ = AV_SAMPLE_FMT_S16;
 
+    //根据之前获得的声道数,初始化声道out_ch_layout_结构体
     av_channel_layout_default(&out_ch_layout_, out_channels_);
 
+    //填写输入的采样率
     int in_rate = codec_ctx_->sample_rate;
     if (in_rate <= 0) {
         in_rate = st->codecpar->sample_rate;
@@ -53,6 +58,7 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
         in_rate = out_rate_;
     }
 
+    //释放 AVChannelLayout 结构体中动态分配的资源,并将其重置为未初始化状态。
     av_channel_layout_uninit(&in_ch_layout_);
     if (codec_ctx_->ch_layout.nb_channels > 0) {
         av_channel_layout_copy(&in_ch_layout_, &codec_ctx_->ch_layout);
@@ -62,7 +68,18 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
         av_channel_layout_default(&in_ch_layout_, out_channels_);
     }
 
-    ret = swr_alloc_set_opts2(&swr_ctx_, &out_ch_layout_, out_sample_fmt_, out_rate_, &in_ch_layout_, codec_ctx_->sample_fmt, in_rate, 0, nullptr);
+    // 如果输入布局顺序未指定，使用默认布局
+    if (in_ch_layout_.order == AV_CHANNEL_ORDER_UNSPEC) {
+        av_channel_layout_default(&in_ch_layout_, in_ch_layout_.nb_channels);
+    }
+
+    // 检查输入采样格式
+    enum AVSampleFormat in_sample_fmt = codec_ctx_->sample_fmt;
+    if (in_sample_fmt == AV_SAMPLE_FMT_NONE) {
+        in_sample_fmt = static_cast<enum AVSampleFormat>(st->codecpar->format);
+    }
+
+    ret = swr_alloc_set_opts2(&swr_ctx_, &out_ch_layout_, out_sample_fmt_, out_rate_, &in_ch_layout_, in_sample_fmt, in_rate, 0, nullptr);
     if (ret < 0) {
         last_error_ = ff::errStr(ret);
         return false;

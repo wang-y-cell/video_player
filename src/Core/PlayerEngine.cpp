@@ -77,6 +77,7 @@ bool PlayerEngine::play() {
     video_packets_.reset();
     video_frames_.reset();
 
+    //解封装线程,用来不断读取格式上下文,获取的pkt,并根据类型放进相应的队列中
     pool_.add_task([this] { demuxer_.readLoop(abort_, audio_packets_, video_packets_); });
     pool_.add_task([this] { audio_.decodeLoop(abort_, audio_packets_); });
     pool_.add_task([this] { video_.decodeLoop(abort_, video_packets_, video_frames_); });

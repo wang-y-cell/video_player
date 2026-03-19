@@ -30,6 +30,8 @@ public:
 
     //关闭文件上下文,重设对应流下标和时间基
     void close();
+
+    //从格式上下文中获得pkt并放入相应的队列中
     void readLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::PacketPtr>& audio_packets, SafeQueue<ff::PacketPtr>& video_packets);
 
     AVFormatContext* context() const;

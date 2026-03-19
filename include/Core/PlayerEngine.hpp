@@ -54,9 +54,14 @@ private:
     std::unique_ptr<IVideoOutput> video_output_;
     Clock clock_;
 
+    //用来终止所有线程的标指
     std::atomic<bool> abort_{false};
+    //判断是否还在运行
     std::atomic<bool> running_{false};
+    //设置暂停
     std::atomic<bool> paused_{false};
+    //是否准备好
     bool prepared_ = false;
+    //上一个错误信息
     std::string last_error_;
 };

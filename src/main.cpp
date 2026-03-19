@@ -4,8 +4,8 @@
 
 #include <SDL3/SDL.h>
 
-#include "./../include/Core/PlayerEngine.hpp"
-#include "./../include/Utils/ThreadPool.hpp"
+#include "PlayerEngine.hpp"
+#include "ThreadPool.hpp"
 
 int main(int argc, char** argv) {
     if (argc < 2) {

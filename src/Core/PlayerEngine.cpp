@@ -22,15 +22,18 @@ PlayerEngine::~PlayerEngine() {
 }
 
 bool PlayerEngine::prepare(const std::string& url) {
+    //初始化相应参数
     prepared_ = false;
     last_error_.clear();
     clock_.reset();
 
+    //打开解封装器
     if (!demuxer_.open(url)) {
         last_error_ = demuxer_.lastError();
         return false;
     }
 
+    //判断有没有音频,如果有音频,就初始化音频解码器
     bool has_audio = false;
     if (demuxer_.audioIndex() >= 0) {
         if (!audio_.init(demuxer_.context(), demuxer_.audioIndex(), demuxer_.audioTimeBase(), &clock_)) {
@@ -40,6 +43,7 @@ bool PlayerEngine::prepare(const std::string& url) {
         has_audio = true;
     }
 
+    //判断有没有视频,如果有视频,就初始化视频解码器
     bool has_video = false;
     if (demuxer_.videoIndex() >= 0) {
         if (!video_.init(demuxer_.context(), demuxer_.videoIndex(), demuxer_.videoTimeBase())) {
@@ -49,6 +53,7 @@ bool PlayerEngine::prepare(const std::string& url) {
         has_video = true;
     }
 
+    //这里我们只要两个都成功,只要有一个没有成功就算失败
     if (!has_audio && !has_video) {
         last_error_ = "No audio or video stream found";
         return false;

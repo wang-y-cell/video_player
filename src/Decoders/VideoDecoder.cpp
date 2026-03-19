@@ -49,10 +49,12 @@ bool VideoDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
 }
 
 void VideoDecoder::close() {
+    //释放像素格式转换上下文
     if (sws_ctx_) {
         sws_freeContext(sws_ctx_);
         sws_ctx_ = nullptr;
     }
+    //释放解码器上下文
     if (codec_ctx_) {
         avcodec_free_context(&codec_ctx_);
     }

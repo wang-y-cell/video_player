@@ -24,6 +24,7 @@ public:
     //音频输出接口(SDL)
     void setOutput(std::unique_ptr<IAudioOutput> output);
     
+    //初始化音频解码器,初始化声道数,采样率,位深,初始化output
     bool init(AVFormatContext* fmt, int stream_index, AVRational time_base, Clock* clock);
     void setPaused(bool paused);
     void setSpeed(double speed);

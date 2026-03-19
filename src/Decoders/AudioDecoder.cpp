@@ -100,6 +100,7 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
         return false;
     }
 
+    //是否打开输出设备
     if (!output_) {
         last_error_ = "audio output not set";
         return false;

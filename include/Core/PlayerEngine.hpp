@@ -16,6 +16,8 @@
 
 class PlayerEngine final : public Mediator {
 public:
+
+    //初始化,初始化线程池,输出窗口,初始化解封装器,音视频解码器的中介设置为此类
     explicit PlayerEngine(thread_pool& pool);
     PlayerEngine(thread_pool& pool, std::unique_ptr<IVideoOutput> output);
     ~PlayerEngine() override;

@@ -8,10 +8,9 @@ public:
     virtual ~IAudioOutput() = default;
 
     /**
-     * Initialize the audio output.
-     * Currently assumes S16 format.
-     * @param rate Sample rate (e.g., 44100, 48000)
-     * @param channels Number of channels (e.g., 1, 2)
+     * 初始化音频的输出
+     * @param rate 采样率 (e.g., 44100, 48000)
+     * @param channels 声道数 (e.g., 1, 2)
      * @return true if successful, false otherwise.
      */
     virtual bool init(int rate, int channels) = 0;

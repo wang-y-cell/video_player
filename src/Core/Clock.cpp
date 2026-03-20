@@ -27,6 +27,8 @@ double Clock::getAudioClock() const {
     }
     const int64_t delta_us = nowUs() - last;
     //delta_us是微妙,需要转换为秒,所以需要除以1000000.0
+    // 注意：SDL_SetAudioStreamFrequencyRatio 改变了音频的实际消耗速度，
+    // 所以这段 delta_us 时间内，实际“流逝”的媒体时间也要乘上 speed_
     return base + (static_cast<double>(delta_us) / 1000000.0) * speed_.load();
 }
 

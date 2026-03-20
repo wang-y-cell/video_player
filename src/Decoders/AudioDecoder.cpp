@@ -209,9 +209,13 @@ void AudioDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
 
                     if (clock_) {
                         const int buffered_bytes = output_->getQueuedSize();
-                        const double buffered_seconds =
+                        // 1. 算出这些字节在 1.0 倍速下本来要播多久
+                        const double base_buffered_seconds =
                             bytes_per_second_ > 0 ? static_cast<double>(buffered_bytes) / static_cast<double>(bytes_per_second_) : 0.0;
-                        clock_->setAudioClock(std::max(0.0, pts_seconds - buffered_seconds));
+                        // 2. 考虑当前的播放倍速，计算实际还需要多久才能播完
+                        const double actual_buffered_seconds = clock_->getSpeed() > 0 ? base_buffered_seconds / clock_->getSpeed() : base_buffered_seconds;
+                        // 3. 将 PTS 减去“实际缓冲时间”，得到目前喇叭里正在发声的真实时间点
+                        clock_->setAudioClock(std::max(0.0, pts_seconds - actual_buffered_seconds));
                     }
                 }
                 fallback_samples += out_samples;

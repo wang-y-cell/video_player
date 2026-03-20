@@ -181,7 +181,8 @@ void PlayerEngine::run() {
         // Handle sync
         if (delay > 0) {
              // If video is ahead of audio, wait
-             // Consider speed
+             // Consider speed: The delay we need to wait in real-world time 
+             // is shorter if we are playing faster.
              double speed = getSpeed();
              if (speed > 0) {
                  delay /= speed;

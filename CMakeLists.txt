@@ -10,11 +10,17 @@ set(CMAKE_BUILD_TYPE Debug)
 # 2. 自动查找库 (支持跨平台: Linux用pkg-config, Windows用vcpkg等标准find_package)
 if(WIN32)
     # 在 Windows 上，通常使用包管理器（如 vcpkg）或手动设置的路径来寻找
-    find_package(FFmpeg REQUIRED COMPONENTS avformat avcodec avutil swscale swresample)
+    find_package(FFMPEG REQUIRED)
     find_package(SDL3 REQUIRED)
     
-    set(FFMPEG_TARGET FFmpeg::FFmpeg) # vcpkg 默认的 FFmpeg target
+    # vcpkg 中的 FFmpeg 没有导出一个总的 FFmpeg::FFmpeg 目标，而是导出具体的组件或使用传统变量
+    # 我们这里使用 vcpkg 生成的标准变量来链接所有的 FFmpeg 库
+    set(FFMPEG_TARGET ${FFMPEG_LIBRARIES}) 
     set(SDL3_TARGET SDL3::SDL3)
+    
+    # 还需要包含 FFmpeg 的头文件路径
+    include_directories(${FFMPEG_INCLUDE_DIRS})
+    link_directories(${FFMPEG_LIBRARY_DIRS})
 else()
     # 在 Linux/macOS 上，使用原生的 pkg-config 最为方便可靠
     find_package(PkgConfig REQUIRED)

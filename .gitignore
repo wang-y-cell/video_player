@@ -4,3 +4,21 @@ build/
 image.png
 .cache/
 .vscode/
+
+# 忽略所有动态链接库和静态库文件
+*.dll
+*.so
+*.so.*
+*.dylib
+*.lib
+*.a
+*.pdb
+
+# 忽略可执行文件
+*.exe
+*.out
+*.app
+
+#忽略第三方库的具体目录，你可以根据需要选择是否忽略整个 3rdparty 目录
+3rdparty/
+

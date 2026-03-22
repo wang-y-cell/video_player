@@ -174,32 +174,55 @@ void PlayerEngine::run() {
             video_inited = true;
         }
 
+        // 视频 PTS 明显落后于音频时丢帧，直到追上或队列暂时为空（解码慢时靠丢帧跟上）
+        constexpr double kVideoLateDropSeconds = 0.12;
+        {
+            bool need_more_frames = false;
+            while (vf) {
+                const double delay_vs_audio = vf->pts_seconds - clock_.getAudioClock();
+                if (delay_vs_audio >= -kVideoLateDropSeconds) {
+                    break;
+                }
+                vf.reset();
+                if (!video_frames_.popFor(vf, 0)) {
+                    need_more_frames = true;
+                    break;
+                }
+                if (!vf) {
+                    break;
+                }
+            }
+            if (!vf) {
+                if (need_more_frames) {
+                    continue;
+                }
+                break;
+            }
+        }
+
         // Sync logic
         const double pts = vf->pts_seconds;
         double delay = pts - clock_.getAudioClock();
-        
+
         // Handle sync
         if (delay > 0) {
              // If video is ahead of audio, wait
-             // Consider speed: The delay we need to wait in real-world time 
+             // Consider speed: The delay we need to wait in real-world time
              // is shorter if we are playing faster.
              double speed = getSpeed();
              if (speed > 0) {
                  delay /= speed;
              }
-             
+
              if (delay > 0.1) {
                  // Large delay, probably seeking or startup, just wait up to 100ms
                  delay = 0.1;
              }
-             
+
              uint32_t delay_ms = static_cast<uint32_t>(delay * 1000);
              if (delay_ms > 0) {
                  SDL_Delay(delay_ms);
              }
-        } else if (delay < -0.5) {
-            // Video is way behind audio (e.g. slow decoding), drop frame
-            // But for now we just render it late
         }
 
         video_output_->render(vf->frame.get());

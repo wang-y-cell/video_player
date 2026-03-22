@@ -46,6 +46,8 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
         return false;
     }
     
+    //采样率和声道数基本不变,但是采样格式需要改变
+
     //设置输出采样率
     out_rate_ = codec_ctx_->sample_rate > 0 ? codec_ctx_->sample_rate : 48000;
     //设置输出声道数
@@ -168,12 +170,14 @@ void AudioDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
             break;
         }
 
+        //将pkt数据送到解码器中
         int ret = avcodec_send_packet(codec_ctx_, pkt.get());
         if (ret < 0) {
             continue;
         }
 
         while (!abort_flag.load()) {
+            //将解码后的数据放入frame
             ret = avcodec_receive_frame(codec_ctx_, frame.get());
             if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
                 break;
@@ -182,6 +186,8 @@ void AudioDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
                 break;
             }
 
+            //获取frame中的时间戳
+            //AV_NOPTS_VALUE表示没有有效时间戳
             const double pts_seconds = (frame->best_effort_timestamp != AV_NOPTS_VALUE)
                                            ? static_cast<double>(frame->best_effort_timestamp) * av_q2d(time_base_)
                                            : static_cast<double>(fallback_samples) / static_cast<double>(out_rate_);

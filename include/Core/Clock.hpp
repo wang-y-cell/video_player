@@ -22,6 +22,9 @@ public:
     void setSpeed(double speed);
     double getSpeed() const;
 
+    void pause();
+    void resume();
+
 private:
     static int64_t nowUs();
 
@@ -29,6 +32,9 @@ private:
     std::atomic<double> audio_pts_seconds_{0.0};
     //记录上次调用setAudioClock的时候,计算机系统的绝对时间,修改的时候与audio_pts_seconds_同时进行
     std::atomic<int64_t> last_update_us_{0};
+
+    //暂停状态
+    std::atomic<bool> paused_{false};
 
     //播放倍速
     std::atomic<double> speed_{1.0};

@@ -90,6 +90,7 @@ void PlayerEngine::pause() {
     }
     paused_.store(true);
     audio_.setPaused(true);
+    clock_.pause();
 }
 
 void PlayerEngine::resume() {
@@ -98,6 +99,7 @@ void PlayerEngine::resume() {
     }
     paused_.store(false);
     audio_.setPaused(false);
+    clock_.resume();
 }
 
 void PlayerEngine::togglePause() {

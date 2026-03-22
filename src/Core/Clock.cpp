@@ -11,6 +11,7 @@ void Clock::reset() {
     audio_pts_seconds_.store(0.0);
     last_update_us_.store(0);
     speed_.store(1.0);
+    paused_.store(false);
 }
 
 void Clock::setAudioClock(double pts_seconds) {
@@ -25,8 +26,8 @@ bool Clock::audioClockSynced() const {
 double Clock::getAudioClock() const {
     const double base = audio_pts_seconds_.load();
     const int64_t last = last_update_us_.load();
-    //播放器刚启动或者刚刚被重置
-    if (last == 0) { //如果视频解码出来一帧,但是音频还没哟解码出来
+    //播放器刚启动或者刚刚被重置，或者处于暂停状态
+    if (last == 0 || paused_.load()) { //如果视频解码出来一帧,但是音频还没哟解码出来
         return base;
     }
     const int64_t delta_us = nowUs() - last;
@@ -45,4 +46,19 @@ void Clock::setSpeed(double speed) {
 
 double Clock::getSpeed() const {
     return speed_.load();
+}
+
+void Clock::pause() {
+    if (paused_.load()) return;
+    // 暂停时，将当前时间冻结为 base pts
+    double current = getAudioClock();
+    paused_.store(true);
+    setAudioClock(current);
+}
+
+void Clock::resume() {
+    if (!paused_.load()) return;
+    paused_.store(false);
+    // 恢复时，重置时间基准为当前物理时间，防止时间跳跃
+    last_update_us_.store(nowUs());
 }

@@ -16,6 +16,9 @@ public:
     //获得当前pts值(double)
     double getAudioClock() const;
 
+    /** 是否已有至少一次 setAudioClock（音频线程已开始更新主时钟）。未就绪时 getAudioClock 恒为 0，不可用于与视频 PTS 比较。 */
+    bool audioClockSynced() const;
+
     void setSpeed(double speed);
     double getSpeed() const;
 

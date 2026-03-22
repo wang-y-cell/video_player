@@ -175,11 +175,13 @@ void PlayerEngine::run() {
         }
 
         // 视频 PTS 明显落后于音频时丢帧，直到追上或队列暂时为空（解码慢时靠丢帧跟上）
+        // 音频尚未首次 setAudioClock 时，getAudioClock 恒为 0，不可用于与 PTS 比较（否则会误判落后/丢帧）
         constexpr double kVideoLateDropSeconds = 0.12;
         {
             bool need_more_frames = false;
             while (vf) {
-                const double delay_vs_audio = vf->pts_seconds - clock_.getAudioClock();
+                const double delay_vs_audio =
+                    clock_.audioClockSynced() ? (vf->pts_seconds - clock_.getAudioClock()) : 0.0;
                 if (delay_vs_audio >= -kVideoLateDropSeconds) {
                     break;
                 }
@@ -202,9 +204,10 @@ void PlayerEngine::run() {
 
         // Sync logic
         const double pts = vf->pts_seconds;
-        double delay = pts - clock_.getAudioClock();
+        double delay = clock_.audioClockSynced() ? (pts - clock_.getAudioClock()) : 0.0;
 
-        // Handle sync
+        // Handle sync：仅当音频主时钟已开始更新时才根据 delay 等待。
+        // 否则 getAudioClock 为 0，delay 恒为正，会每帧 SDL_Delay，表现为起播「慢动作」且随后与真实音频错位。
         if (delay > 0) {
              // If video is ahead of audio, wait
              // Consider speed: The delay we need to wait in real-world time

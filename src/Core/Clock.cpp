@@ -18,6 +18,10 @@ void Clock::setAudioClock(double pts_seconds) {
     last_update_us_.store(nowUs());
 }
 
+bool Clock::audioClockSynced() const {
+    return last_update_us_.load() != 0;
+}
+
 double Clock::getAudioClock() const {
     const double base = audio_pts_seconds_.load();
     const int64_t last = last_update_us_.load();

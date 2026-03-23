@@ -1,6 +1,0 @@
-{
-  "dependencies": [
-    "ffmpeg",
-    "sdl3"
-  ]
-}

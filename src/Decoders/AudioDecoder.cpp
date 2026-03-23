@@ -160,6 +160,9 @@ void AudioDecoder::close() {
 void AudioDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::PacketPtr>& packets) {
     ff::FramePtr frame = ff::makeFrame();
     int64_t fallback_samples = 0;
+    constexpr double kMaxQueuedSeconds = 0.25;
+    constexpr double kMaxClockCompSeconds = 0.25;
+    constexpr double kStartupClockCompSeconds = 0.05;
 
     while (!abort_flag.load()) {
         ff::PacketPtr pkt;
@@ -207,9 +210,13 @@ void AudioDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
                 
                 // Wait if buffer is too full to avoid overfilling
                 if (output_) {
-                    while (!abort_flag.load() && bytes_per_second_ > 0 &&
-                           output_->getQueuedSize() > (bytes_per_second_ * 2)) {
-                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    while (!abort_flag.load() && bytes_per_second_ > 0) {
+                        const int queued = output_->getQueuedSize();
+                        const double queued_seconds = static_cast<double>(queued) / static_cast<double>(bytes_per_second_);
+                        if (queued_seconds <= kMaxQueuedSeconds) {
+                            break;
+                        }
+                        std::this_thread::sleep_for(std::chrono::milliseconds(5));
                     }
                     output_->write(out_data, out_size);
 
@@ -221,7 +228,15 @@ void AudioDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
                         // 2. 考虑当前的播放倍速，计算实际还需要多久才能播完
                         const double actual_buffered_seconds = clock_->getSpeed() > 0 ? base_buffered_seconds / clock_->getSpeed() : base_buffered_seconds;
                         // 3. 将 PTS 减去“实际缓冲时间”，得到目前喇叭里正在发声的真实时间点
-                        clock_->setAudioClock(std::max(0.0, pts_seconds - actual_buffered_seconds));
+                        const double max_comp = clock_->audioClockSynced() ? kMaxClockCompSeconds : kStartupClockCompSeconds;
+                        const double compensated = std::min(actual_buffered_seconds, max_comp);
+                        const double target_clock = std::max(0.0, pts_seconds - compensated);
+                        if (!clock_->audioClockSynced()) {
+                            clock_->setAudioClock(target_clock);
+                        } else {
+                            const double current_clock = clock_->getAudioClock();
+                            clock_->setAudioClock(std::max(current_clock, target_clock));
+                        }
                     }
                 }
                 fallback_samples += out_samples;

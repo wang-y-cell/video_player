@@ -2,6 +2,26 @@
 #include "SDL3Output.hpp"
 #include "SDLAudioOutput.hpp"
 #include <algorithm>
+#include <cstdint>
+
+namespace {
+void sleepSeconds(double seconds) {
+    if (seconds <= 0.0) return;
+    const uint64_t start = SDL_GetTicksNS();
+    const uint64_t target = start + static_cast<uint64_t>(seconds * 1000000000.0);
+    while (true) {
+        const uint64_t now = SDL_GetTicksNS();
+        if (now >= target) break;
+        const uint64_t remaining_ns = target - now;
+        if (remaining_ns > 2000000ULL) {
+            const uint32_t ms = static_cast<uint32_t>((remaining_ns - 1000000ULL) / 1000000ULL);
+            SDL_Delay(ms);
+        } else {
+            SDL_Delay(0);
+        }
+    }
+}
+} // namespace
 
 PlayerEngine::PlayerEngine(thread_pool& pool) : pool_(pool), video_output_(new SDL3Output()) {
     demuxer_.set_mediator(this);
@@ -178,7 +198,7 @@ void PlayerEngine::run() {
 
         // 视频 PTS 明显落后于音频时丢帧，直到追上或队列暂时为空（解码慢时靠丢帧跟上）
         // 音频尚未首次 setAudioClock 时，getAudioClock 恒为 0，不可用于与 PTS 比较（否则会误判落后/丢帧）
-        constexpr double kVideoLateDropSeconds = 0.12;
+        constexpr double kVideoLateDropSeconds = 0.08;
         {
             bool need_more_frames = false;
             while (vf) {
@@ -210,7 +230,7 @@ void PlayerEngine::run() {
 
         // Handle sync：仅当音频主时钟已开始更新时才根据 delay 等待。
         // 否则 getAudioClock 为 0，delay 恒为正，会每帧 SDL_Delay，表现为起播「慢动作」且随后与真实音频错位。
-        if (delay > 0) {
+        if (delay > 0.002) {
              // If video is ahead of audio, wait
              // Consider speed: The delay we need to wait in real-world time
              // is shorter if we are playing faster.
@@ -224,10 +244,7 @@ void PlayerEngine::run() {
                  delay = 0.1;
              }
 
-             uint32_t delay_ms = static_cast<uint32_t>(delay * 1000);
-             if (delay_ms > 0) {
-                 SDL_Delay(delay_ms);
-             }
+             sleepSeconds(delay);
         }
 
         video_output_->render(vf->frame.get());

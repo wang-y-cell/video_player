@@ -12,7 +12,7 @@ if(WIN32)
      set(FFMPEG_ROOT "F:\\wy\\ffmpeg-master-latest-win64-gpl-shared")
      set(SDL3_ROOT "F:\\wy\\SDL3")
      include_directories(${FFMPEG_ROOT}/include)
-     include_directories(${SDL3_ROOT}/include);
+     include_directories(${SDL3_ROOT}/include)
      # 链接库文件位置
      link_directories(${FFMPEG_ROOT}/lib)
      link_directories(${SDL3_ROOT}/lib)

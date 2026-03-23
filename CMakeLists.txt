@@ -61,3 +61,34 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 # 7. 指定编译好的程序输出到 bin/ 目录
 set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
+
+# 8. Windows: 构建后拷贝运行时依赖 DLL 到输出目录（避免手动设置 PATH）
+if(WIN32)
+    set(FFMPEG_BIN_DIR "${FFMPEG_ROOT}/bin")
+    set(SDL3_BIN_DIR "${SDL3_ROOT}/bin")
+
+    set(RUNTIME_DLLS "")
+
+    if(EXISTS "${FFMPEG_BIN_DIR}")
+        file(GLOB FFMPEG_DLLS "${FFMPEG_BIN_DIR}/*.dll")
+        list(APPEND RUNTIME_DLLS ${FFMPEG_DLLS})
+    endif()
+
+    if(EXISTS "${SDL3_BIN_DIR}/SDL3.dll")
+        list(APPEND RUNTIME_DLLS "${SDL3_BIN_DIR}/SDL3.dll")
+    endif()
+
+    get_filename_component(MINGW_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+    foreach(_dll IN ITEMS libgcc_s_seh-1.dll libstdc++-6.dll libmcfgthread-2.dll)
+        if(EXISTS "${MINGW_BIN_DIR}/${_dll}")
+            list(APPEND RUNTIME_DLLS "${MINGW_BIN_DIR}/${_dll}")
+        endif()
+    endforeach()
+
+    if(RUNTIME_DLLS)
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${RUNTIME_DLLS} $<TARGET_FILE_DIR:${PROJECT_NAME}>
+            VERBATIM
+        )
+    endif()
+endif()

@@ -3,7 +3,7 @@
 这是一个基于 C++17 开发的跨平台视频播放器。项目核心利用 **FFmpeg** 进行音视频解封装与解码，并使用 **SDL3** 进行音视频渲染与播放。
 
 项目采用 CMake 作为构建系统，并针对不同操作系统采用了不同的包管理策略，以实现真正的跨平台开发：
-- **Windows**: 使用 [vcpkg](https://vcpkg.io/) (Manifest 模式) 自动管理和编译依赖。
+- **Windows**: 使用本机安装的 FFmpeg/SDL3（通过 CMake 变量配置路径）。
 - **Linux**: 使用原生的 `pkg-config` 寻找系统级依赖。
 
 ---
@@ -22,36 +22,51 @@
 
 ## 编译教程：Windows
 
-在 Windows 平台上，我们推荐使用 `vcpkg` 配合 CMake 来自动处理依赖下载与编译。
+在 Windows 平台上，需要你预先安装 FFmpeg 与 SDL3，并在 CMake 配置阶段传入它们的路径。
+```CMakeLists.txt
+if(NOT DEFINED FFMPEG_ROOT)
+          set(FFMPEG_ROOT "F:\\wy\\ffmpeg-master-latest-win64-gpl-shared") <-------修改路径
+     endif()
+     if(NOT DEFINED SDL3_ROOT)
+          set(SDL3_ROOT "F:\\wy\\SDL3") <---------修改路径
+     endif()
 
-### 1. 准备 vcpkg
-确保您已经安装了 vcpkg，并执行了全局集成：
-```powershell
-# 在您的 vcpkg 安装目录下执行
-.\vcpkg integrate install
 ```
+### 1. 准备依赖
 
-### 2. 处理网络问题（可选但强烈建议）
-由于 vcpkg 下载源码时底层使用 `curl`，在国内网络环境下（尤其是使用代理时）极易出现 `SSL connect error` (Error 35)。
-在配置 CMake 之前，**请务必在终端中设置好代理环境变量**，强制指定 `http://` 协议：
-```powershell
-$env:HTTP_PROXY="http://127.0.0.1:7897"  # 请将 7897 替换为您的实际代理端口
-$env:HTTPS_PROXY="http://127.0.0.1:7897"
-```
+需要准备两个目录（示例结构如下）：
 
-### 3. 配置与编译
+- `FFMPEG_ROOT`
+  - `include/`
+  - `lib/`
+  - `bin/`
+- `SDL3_ROOT`
+  - `include/`
+  - `lib/`
+  - `bin/`
+
+本项目的 Windows 配置会读取 `FFMPEG_ROOT` 与 `SDL3_ROOT` 变量（见 [CMakeLists.txt](file:///f:/wy/code/vscode/c++/video_player/CMakeLists.txt)），你可以在运行 CMake 时用 `-DFFMPEG_ROOT=... -DSDL3_ROOT=...` 传入。
+
+### 2. 配置与编译
 在项目根目录下打开 PowerShell 终端，执行以下命令：
 
 ```powershell
-# 1. 配置项目（vcpkg 将在此阶段自动下载并编译 FFmpeg 和 SDL3，可能需要较长时间）
-# 注意：请将 CMAKE_TOOLCHAIN_FILE 的路径替换为您本机 vcpkg 的实际路径
-cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="<您的vcpkg路径>/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows
+# 1. 配置项目（请把路径替换为你本机实际安装位置）
+cmake -B build -S . -G "MinGW Makefiles" `
+  -DFFMPEG_ROOT="F:\wy\ffmpeg-master-latest-win64-gpl-shared" `
+  -DSDL3_ROOT="F:\wy\SDL3"
 
 # 2. 编译项目
-cmake --build build --config Debug
+cmake --build build
 ```
 
-编译成功后，可执行文件 `player.exe` 以及自动拷贝过来的依赖 `.dll` 文件将位于 `bin/Debug/` 目录下。
+编译成功后，可执行文件 `player.exe` 将输出到 `bin/` 目录。
+
+运行与调试时请确保以下目录在 `PATH` 中，否则可能出现 `0xc0000135`（缺少 DLL）：
+
+- `${FFMPEG_ROOT}\bin`
+- `${SDL3_ROOT}\bin`
+- `MinGW\bin`（例如 `F:\mingw\mingw64\bin`）
 
 ---
 
@@ -96,7 +111,7 @@ cmake --build build -j$(nproc)
 
 **Windows:**
 ```powershell
-.\bin\Debug\player.exe
+.\bin\player.exe
 ```
 
 **Linux:**

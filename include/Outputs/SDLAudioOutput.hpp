@@ -11,6 +11,7 @@ public:
 
     bool init(int rate, int channels) override;
     void write(const uint8_t* data, int size) override;
+    //获得音频播放器剩余没有播放的字节数
     int getQueuedSize() const override;
     void pause() override;
     void resume() override;

@@ -192,10 +192,14 @@ void AudioDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
             //获取frame中的时间戳
             //AV_NOPTS_VALUE表示没有有效时间戳
             const double pts_seconds = (frame->best_effort_timestamp != AV_NOPTS_VALUE)
+                                                //best_effort_timestamp 是尽力而为展示时间戳
                                            ? static_cast<double>(frame->best_effort_timestamp) * av_q2d(time_base_)
                                            : static_cast<double>(fallback_samples) / static_cast<double>(out_rate_);
-
+            //下一次 swr_convert 可能吐出的最大输出样本数”。
+            //一般重采样的样本数不等于输入样本数
+            //比如:AAC：常见每帧 1024 样本（每声道
             const int max_out_samples = swr_get_out_samples(swr_ctx_, frame->nb_samples);
+            //ffmpeg中音频缓冲区是以一字节为基本单位的
             uint8_t* out_data = nullptr;
             int out_linesize = 0;
             const int alloc_ret = av_samples_alloc(&out_data, &out_linesize, out_channels_, max_out_samples, out_sample_fmt_, 0);
@@ -204,6 +208,8 @@ void AudioDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
                 continue;
             }
 
+            //负责把“输入音频帧的数据”按你配置的目标采样率、采样格式、声道布局重采样并重排格式，输出到你提供的缓冲区 out_data 中。
+            //返回值 out_samples 表示实际输出的样本数。
             const int out_samples = swr_convert(swr_ctx_, &out_data, max_out_samples, (const uint8_t**)frame->extended_data, frame->nb_samples);
             if (out_samples > 0) {
                 const int out_size = out_samples * out_channels_ * av_get_bytes_per_sample(out_sample_fmt_);
@@ -211,6 +217,7 @@ void AudioDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
                 // Wait if buffer is too full to avoid overfilling
                 if (output_) {
                     while (!abort_flag.load() && bytes_per_second_ > 0) {
+                        //在音频输出层读取当前设备队列中尚未播放的内容,返回SDL中待播放的字节数
                         const int queued = output_->getQueuedSize();
                         const double queued_seconds = static_cast<double>(queued) / static_cast<double>(bytes_per_second_);
                         if (queued_seconds <= kMaxQueuedSeconds) {

@@ -197,6 +197,7 @@ void AudioDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
 
             const int max_out_samples = swr_get_out_samples(swr_ctx_, frame->nb_samples);
             uint8_t* out_data = nullptr;
+            //每个平面的字节数
             int out_linesize = 0;
             const int alloc_ret = av_samples_alloc(&out_data, &out_linesize, out_channels_, max_out_samples, out_sample_fmt_, 0);
             if (alloc_ret < 0) {

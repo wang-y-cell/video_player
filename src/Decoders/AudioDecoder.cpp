@@ -194,6 +194,7 @@ void AudioDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
             const double pts_seconds = (frame->best_effort_timestamp != AV_NOPTS_VALUE)
                                                 //best_effort_timestamp 是尽力而为展示时间戳
                                            ? static_cast<double>(frame->best_effort_timestamp) * av_q2d(time_base_)
+                                           //如果没有有效的时间戳,我们就用以输出的样本累计数来计算当前frame在时间上的位置
                                            : static_cast<double>(fallback_samples) / static_cast<double>(out_rate_);
             //下一次 swr_convert 可能吐出的最大输出样本数”。
             //一般重采样的样本数不等于输入样本数
@@ -217,6 +218,8 @@ void AudioDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
                 
                 // Wait if buffer is too full to avoid overfilling
                 if (output_) {
+
+                    //限制音频设备队列中尚未播放的数据量
                     while (!abort_flag.load() && bytes_per_second_ > 0) {
                         //在音频输出层读取当前设备队列中尚未播放的内容,返回SDL中待播放的字节数
                         const int queued = output_->getQueuedSize();
@@ -236,6 +239,7 @@ void AudioDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
                         // 2. 考虑当前的播放倍速，计算实际还需要多久才能播完
                         const double actual_buffered_seconds = clock_->getSpeed() > 0 ? base_buffered_seconds / clock_->getSpeed() : base_buffered_seconds;
                         // 3. 将 PTS 减去“实际缓冲时间”，得到目前喇叭里正在发声的真实时间点
+                        //接下来计算补偿数据,就是说计算得到的剩余时间是不一定的,可能会有抖动,我们需要这个补偿缓解抖动
                         const double max_comp = clock_->audioClockSynced() ? kMaxClockCompSeconds : kStartupClockCompSeconds;
                         const double compensated = std::min(actual_buffered_seconds, max_comp);
                         const double target_clock = std::max(0.0, pts_seconds - compensated);

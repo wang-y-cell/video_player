@@ -7,16 +7,23 @@
 namespace {
 void sleepSeconds(double seconds) {
     if (seconds <= 0.0) return;
+    //获得SDL初始化以来所经过的纳秒时间
     const uint64_t start = SDL_GetTicksNS();
     const uint64_t target = start + static_cast<uint64_t>(seconds * 1000000000.0);
     while (true) {
+        //开始记录当前时间,用来比较target时间
         const uint64_t now = SDL_GetTicksNS();
+        //如果现在时间大于或者等于target时间了,说明等待的时间到了
         if (now >= target) break;
+        //计算出我们还需要多少时间来等待
         const uint64_t remaining_ns = target - now;
+        //如果等待的时间大于2ms,就等待2ms,避免等待时间过长
         if (remaining_ns > 2000000ULL) {
+            //等待多余的时间,剩下的1ms的时候用于忙等待
             const uint32_t ms = static_cast<uint32_t>((remaining_ns - 1000000ULL) / 1000000ULL);
             SDL_Delay(ms);
         } else {
+            //不同于空转,每次主动让出时间片给其他线程,避免占用太多CPU资源,但又可以及时响应其他线程的请求
             SDL_Delay(0);
         }
     }
@@ -172,6 +179,7 @@ void PlayerEngine::run() {
             }
         }
 
+        //如果是暂停,就停止10ms,等待用户操作,避免反复检查
         if (paused_.load()) {
             SDL_Delay(10);
             continue;
@@ -183,10 +191,12 @@ void PlayerEngine::run() {
             continue;
         }
         
+        //如果读到最后传入的空指针,就说明视频解码完成了
         if (!vf) {
             break; // End of stream
         }
 
+        //如果没有初始化显示频幕,就初始化
         if (!video_inited) {
             if (!video_output_->ensureInit(vf->frame->width, vf->frame->height)) {
                 last_error_ = video_output_->lastError();
@@ -230,17 +240,16 @@ void PlayerEngine::run() {
 
         // Handle sync：仅当音频主时钟已开始更新时才根据 delay 等待。
         // 否则 getAudioClock 为 0，delay 恒为正，会每帧 SDL_Delay，表现为起播「慢动作」且随后与真实音频错位。
+        //当视频超过音频2ms的时候,认为明显超前,需要等待
         if (delay > 0.002) {
-             // If video is ahead of audio, wait
-             // Consider speed: The delay we need to wait in real-world time
-             // is shorter if we are playing faster.
              double speed = getSpeed();
+             //获得当前播放倍速,并将等待时间按照倍速缩短
              if (speed > 0) {
                  delay /= speed;
              }
 
              if (delay > 0.1) {
-                 // Large delay, probably seeking or startup, just wait up to 100ms
+                 //如果delay的时间超过100ms,就只等待100ms,避免等待时间过长
                  delay = 0.1;
              }
 

@@ -13,6 +13,7 @@ extern "C" {
 #include "SafeQueue.hpp"
 #include "IDecoder.hpp"
 
+//视频帧的结构体,其中的时间戳是为了与音频对齐
 struct VideoFrame {
     ff::FramePtr frame;
     double pts_seconds = 0.0;

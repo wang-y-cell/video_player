@@ -3,6 +3,7 @@
 #include "SDLAudioOutput.hpp"
 #include <algorithm>
 #include <cstdint>
+#include <iostream>
 
 namespace {
 void sleepSeconds(double seconds) {
@@ -170,11 +171,22 @@ void PlayerEngine::run() {
                 } else if (ev.key.key == SDLK_SPACE) {
                     togglePause();
                 } else if (ev.key.key == SDLK_UP) {
-                    setSpeed(getSpeed() + 0.25);
+                    double  speed = 0;
+                    setSpeed(speed = std::min(2.0,getSpeed() + 0.5));
+                    std::cout << "\r" << std::string(50, ' ') << "\r";
+                    std::cout.flush();
+                    std::cout << "current speed: " << speed;
                 } else if (ev.key.key == SDLK_DOWN) {
-                    setSpeed(std::max(0.25, getSpeed() - 0.25));
+                    double  speed = 0;
+                    std::cout << "\r" << std::string(50, ' ') << "\r";
+                    std::cout.flush();
+                    setSpeed(speed = std::max(0.50, getSpeed() - 0.50));
+                    std::cout << "current speed: " << speed;
                 } else if (ev.key.key == SDLK_R) {
                     setSpeed(1.0);
+                    std::cout << "\r" << std::string(50, ' ') << "\r";
+                    std::cout.flush();
+                    std::cout << "current speed: " << 1.0;
                 }
             }
         }

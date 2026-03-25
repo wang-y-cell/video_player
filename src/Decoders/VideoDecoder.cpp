@@ -83,6 +83,8 @@ void VideoDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
 
         while (!abort_flag.load()) {
             ret = avcodec_receive_frame(codec_ctx_, frame.get());
+            //AVERROR(EAGAIN)表示解码器需要更多的输入数据
+            //AVERROR_EOF表示解码器已经没有更多的输入数据
             if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
                 break;
             }
@@ -90,6 +92,7 @@ void VideoDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
                 break;
             }
 
+            //视频帧没有像音频那样的样本数,所以不能像音频那样预测视频
             const double pts_seconds =
                 (frame->best_effort_timestamp != AV_NOPTS_VALUE) ? static_cast<double>(frame->best_effort_timestamp) * av_q2d(time_base_) : 0.0;
 
@@ -106,6 +109,8 @@ void VideoDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
             yuv->format = AV_PIX_FMT_YUV420P;
             yuv->width = codec_ctx_->width;
             yuv->height = codec_ctx_->height;
+            //为已设置好格式/尺寸的AVFrame分配实际的数据缓冲区,
+            //32表示对齐字节数,一般设为32即可
             if (av_frame_get_buffer(yuv, 32) < 0) {
                 av_frame_free(&yuv);
                 av_frame_unref(frame.get());
@@ -118,6 +123,8 @@ void VideoDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
             vf->frame = ff::FramePtr(yuv, ff::FrameDeleter{});
             vf->pts_seconds = pts_seconds;
 
+            //播放器没有停止的情况下,如果frame队列太大了,
+            //就等待10ms,等播放器处理完一些帧
             while (!abort_flag.load() && frames.size() > 20) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
@@ -127,6 +134,7 @@ void VideoDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
         }
     }
 
+    //用来表示视频结束的特殊帧
     frames.push(VideoFramePtr{});
 }
 

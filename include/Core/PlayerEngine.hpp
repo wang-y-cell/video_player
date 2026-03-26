@@ -30,6 +30,8 @@ public:
     void togglePause();
     void setSpeed(double speed);
     double getSpeed() const;
+    bool seekTo(double target_seconds);
+    bool seekBy(double delta_seconds);
     void run();
     void stop();
 

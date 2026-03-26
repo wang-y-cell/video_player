@@ -148,6 +148,51 @@ double PlayerEngine::getSpeed() const {
     return clock_.getSpeed();
 }
 
+bool PlayerEngine::seekTo(double target_seconds) {
+    if (!running_.load()) {
+        return false;
+    }
+
+    const double duration = demuxer_.durationSeconds();
+    double clamped_target = std::max(0.0, target_seconds);
+    if (duration > 0.0) {
+        clamped_target = std::min(clamped_target, duration);
+    }
+    std::cout << "\nseek target: " << clamped_target << "s";
+
+    const bool was_paused = paused_.load();
+    pause();
+
+    audio_packets_.reset();
+    video_packets_.reset();
+    video_frames_.reset();
+
+    if (!demuxer_.seekSeconds(clamped_target)) {
+        last_error_ = demuxer_.lastError();
+        std::cout << "\nseek failed: " << last_error_;
+        if (!was_paused) {
+            resume();
+        }
+        return false;
+    }
+
+    audio_.flush();
+    video_.flush();
+    clock_.setAudioClockUnsynced(clamped_target);
+
+    if (!was_paused) {
+        resume();
+    }
+    std::cout << "\nseek done";
+
+    return true;
+}
+
+bool PlayerEngine::seekBy(double delta_seconds) {
+    const double current = std::max(0.0, clock_.getAudioClock());
+    return seekTo(current + delta_seconds);
+}
+
 void PlayerEngine::run() {
     if (!running_.load()) {
         return;
@@ -187,6 +232,10 @@ void PlayerEngine::run() {
                     std::cout << "\r" << std::string(50, ' ') << "\r";
                     std::cout.flush();
                     std::cout << "current speed: " << 1.0;
+                } else if (ev.key.key == SDLK_RIGHT) {
+                    seekBy(10.0);
+                } else if (ev.key.key == SDLK_LEFT) {
+                    seekBy(-10.0);
                 }
             }
         }
@@ -197,9 +246,8 @@ void PlayerEngine::run() {
             continue;
         }
 
-        if (!video_frames_.pop(vf)) {
+        if (!video_frames_.popFor(vf, 10)) {
             if (abort_.load()) break;
-            SDL_Delay(2); // Wait for frames
             continue;
         }
         

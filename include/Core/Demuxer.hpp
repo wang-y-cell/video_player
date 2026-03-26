@@ -14,6 +14,8 @@
 
 */
 #include <atomic>
+#include <cstdint>
+#include <mutex>
 #include <string>
 
 #include "FFmpegCommon.hpp"
@@ -33,6 +35,8 @@ public:
 
     //从格式上下文中获得pkt并放入相应的队列中
     void readLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::PacketPtr>& audio_packets, SafeQueue<ff::PacketPtr>& video_packets);
+    bool seekSeconds(double target_seconds);
+    double durationSeconds() const;
 
     AVFormatContext* context() const;
     int audioIndex() const;
@@ -49,4 +53,6 @@ private:
     AVRational audio_time_base_{0, 1};
     AVRational video_time_base_{0, 1};
     std::string last_error_; //包含上次错误的信息,在中介中如果出现错误,调用这个函数就是出错的信息
+    mutable std::mutex io_mutex_;
+    std::atomic<uint64_t> seek_generation_{0};
 };

@@ -16,6 +16,7 @@ public:
     void pause() override;
     void resume() override;
     void setSpeed(double speed) override;
+    void flush() override;
     void close() override;
     const std::string& lastError() const override;
 

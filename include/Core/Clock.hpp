@@ -12,6 +12,7 @@ public:
 
     //设置当前pts和当前计算机系统时间
     void setAudioClock(double pts_seconds);
+    void setAudioClockUnsynced(double pts_seconds);
 
     //获得当前pts值(double)
     double getAudioClock() const;

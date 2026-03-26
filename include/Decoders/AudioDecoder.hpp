@@ -30,6 +30,7 @@ public:
     void setPaused(bool paused);
     //设置播放速度
     void setSpeed(double speed);
+    void flush();
     //关闭解码器,音频播放器,重定向,声道布局
     void close() override;
 

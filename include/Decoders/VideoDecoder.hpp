@@ -28,6 +28,7 @@ public:
 
     //初始化解码器,设置宽高
     bool init(AVFormatContext* fmt, int stream_index, AVRational time_base);
+    void flush();
     //关闭解码器
     void close() override;
     void decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::PacketPtr>& packets, SafeQueue<VideoFramePtr>& frames);

@@ -57,6 +57,12 @@ void SDLAudioOutput::setSpeed(double speed) {
     }
 }
 
+void SDLAudioOutput::flush() {
+    if (sdl_stream_) {
+        SDL_ClearAudioStream(sdl_stream_);
+    }
+}
+
 void SDLAudioOutput::close() {
     if (sdl_stream_) {
         SDL_DestroyAudioStream(sdl_stream_);

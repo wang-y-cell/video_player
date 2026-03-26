@@ -48,6 +48,12 @@ bool VideoDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
     return true;
 }
 
+void VideoDecoder::flush() {
+    if (codec_ctx_) {
+        avcodec_flush_buffers(codec_ctx_);
+    }
+}
+
 void VideoDecoder::close() {
     //释放像素格式转换上下文
     if (sws_ctx_) {

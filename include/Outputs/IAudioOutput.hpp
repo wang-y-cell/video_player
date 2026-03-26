@@ -44,6 +44,7 @@ public:
      * @param speed Speed factor (e.g., 1.0 for normal speed).
      */
     virtual void setSpeed(double speed) = 0;
+    virtual void flush() = 0;
 
     /**
      * Close the audio output and release resources.

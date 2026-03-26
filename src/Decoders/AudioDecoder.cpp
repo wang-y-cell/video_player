@@ -2,6 +2,7 @@
 #include <thread>
 #include <chrono>
 #include <algorithm>
+#include <cmath>
 
 AudioDecoder::~AudioDecoder() {
     close();
@@ -137,6 +138,19 @@ void AudioDecoder::setSpeed(double speed) {
     }
 }
 
+void AudioDecoder::flush() {
+    if (codec_ctx_) {
+        avcodec_flush_buffers(codec_ctx_);
+    }
+    if (swr_ctx_) {
+        swr_close(swr_ctx_);
+        swr_init(swr_ctx_);
+    }
+    if (output_) {
+        output_->flush();
+    }
+}
+
 void AudioDecoder::close() {
     if (output_) {
         output_->close();
@@ -247,7 +261,11 @@ void AudioDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
                             clock_->setAudioClock(target_clock);
                         } else {
                             const double current_clock = clock_->getAudioClock();
-                            clock_->setAudioClock(std::max(current_clock, target_clock));
+                            if (std::abs(current_clock - target_clock) > 0.30) {
+                                clock_->setAudioClock(target_clock);
+                            } else {
+                                clock_->setAudioClock(std::max(current_clock, target_clock));
+                            }
                         }
                     }
                 }

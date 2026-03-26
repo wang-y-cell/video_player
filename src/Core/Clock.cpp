@@ -19,6 +19,11 @@ void Clock::setAudioClock(double pts_seconds) {
     last_update_us_.store(nowUs());
 }
 
+void Clock::setAudioClockUnsynced(double pts_seconds) {
+    audio_pts_seconds_.store(pts_seconds);
+    last_update_us_.store(0);
+}
+
 bool Clock::audioClockSynced() const {
     return last_update_us_.load() != 0;
 }

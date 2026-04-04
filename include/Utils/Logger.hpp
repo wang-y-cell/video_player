@@ -78,7 +78,7 @@ private:
 
     std::atomic<int> level_{static_cast<int>(Level::Info)};
     std::mutex mutex_;
-    //是否可以打印日志的条件
+    //是否可以在终端打印日志的条件
     bool console_enabled_ = true;
     std::ofstream file_;
 };

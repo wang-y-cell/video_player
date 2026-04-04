@@ -1,9 +1,11 @@
 #include "Logger.hpp"
 
 #include <chrono>
+#include <ctime>
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
+#include <mutex>
 #include <thread>
 
 extern "C" {
@@ -11,7 +13,9 @@ extern "C" {
 }
 
 namespace {
-    //清理日志消息中的换行符
+std::mutex g_time_mutex;
+
+//清理日志消息中的换行符
 std::string trimMessage(const std::string& input) {
     std::string result = input;
     while (!result.empty() && (result.back() == '\n' || result.back() == '\r')) {
@@ -28,7 +32,14 @@ std::string buildTimestamp() {
     const auto ms = duration_cast<milliseconds>(now.time_since_epoch()) % 1000;
 
     std::tm tm_value{};
-    localtime_r(&time, &tm_value);
+    {
+        std::lock_guard<std::mutex> lock(g_time_mutex);
+        const std::tm* local_tm = std::localtime(&time);
+        if (!local_tm) {
+            return {};
+        }
+        tm_value = *local_tm;
+    }
 
     std::ostringstream stream;
     stream << std::put_time(&tm_value, "%Y-%m-%d %H:%M:%S") << '.'

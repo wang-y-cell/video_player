@@ -31,6 +31,7 @@ int main(int argc, char** argv) {
     logger.setLevel(Logger::Level::Debug);
     av_log_set_level(AV_LOG_DEBUG);
 #endif
+    //打开日志文件
     const std::filesystem::path executable_path(argv[0]);
     const std::filesystem::path log_path = (executable_path.parent_path() / ".." / "logs" / "player.log").lexically_normal();
     if (!logger.setFile(log_path.string())) {

@@ -1,22 +1,52 @@
-#include <iostream>
-
+#include <cstdarg>
+#include <cstdio>
+#include <filesystem>
 #include <string>
 
 #include <SDL3/SDL.h>
 
+#include "Logger.hpp"
 #include "PlayerEngine.hpp"
 #include "ThreadPool.hpp"
 
+extern "C" {
+#include <libavutil/log.h>
+}
+
+namespace {
+void ffmpegLogCallback(void*, int level, const char* fmt, va_list args) {
+    char buffer[1024];
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    Logger::instance().logFfmpeg(level, buffer);
+}
+}
+
 int main(int argc, char** argv) {
+    auto& logger = Logger::instance();
+#ifdef NDEBUG
+    logger.setLevel(Logger::Level::Info);
+    av_log_set_level(AV_LOG_INFO);
+#else
+    logger.setLevel(Logger::Level::Debug);
+    av_log_set_level(AV_LOG_DEBUG);
+#endif
+    const std::filesystem::path executable_path(argv[0]);
+    const std::filesystem::path log_path = (executable_path.parent_path() / ".." / "logs" / "player.log").lexically_normal();
+    if (!logger.setFile(log_path.string())) {
+        LOG_WARN("Main", "open log file failed: " << log_path.string());
+    }
+    av_log_set_callback(ffmpegLogCallback);
+
     if (argc < 2) {
-        std::cerr << "usage: " << argv[0] << " <input>\n";
+        LOG_ERROR("Main", "usage: " << argv[0] << " <input>");
         return 1;
     }
 
     const std::string input = argv[1];
+    LOG_INFO("Main", "start player with input: " << input);
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS)) {
-        std::cerr << "SDL_Init failed: " << SDL_GetError() << "\n";
+        LOG_ERROR("Main", "SDL_Init failed: " << SDL_GetError());
         return 1;
     }
 
@@ -24,12 +54,12 @@ int main(int argc, char** argv) {
         thread_pool pool(4);
         PlayerEngine engine(pool);
         if (!engine.prepare(input)) {
-            std::cerr << "prepare failed: " << engine.lastError() << "\n";
+            LOG_ERROR("Main", "prepare failed: " << engine.lastError());
             SDL_Quit();
             return 1;
         }
         if (!engine.play()) {
-            std::cerr << "play failed: " << engine.lastError() << "\n";
+            LOG_ERROR("Main", "play failed: " << engine.lastError());
             SDL_Quit();
             return 1;
         }
@@ -37,5 +67,7 @@ int main(int argc, char** argv) {
     }
 
     SDL_Quit();
+    LOG_INFO("Main", "player exited");
+    logger.closeFile();
     return 0;
 }

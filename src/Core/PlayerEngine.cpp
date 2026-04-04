@@ -1,9 +1,9 @@
 #include "PlayerEngine.hpp"
+#include "Logger.hpp"
 #include "SDL3Output.hpp"
 #include "SDLAudioOutput.hpp"
 #include <algorithm>
 #include <cstdint>
-#include <iostream>
 
 namespace {
 void sleepSeconds(double seconds) {
@@ -58,6 +58,7 @@ bool PlayerEngine::prepare(const std::string& url) {
     //打开解封装器
     if (!demuxer_.open(url)) {
         last_error_ = demuxer_.lastError();
+        LOG_ERROR("PlayerEngine", "prepare failed to open input: " << last_error_);
         return false;
     }
 
@@ -66,6 +67,7 @@ bool PlayerEngine::prepare(const std::string& url) {
     if (demuxer_.audioIndex() >= 0) {
         if (!audio_.init(demuxer_.context(), demuxer_.audioIndex(), demuxer_.audioTimeBase(), &clock_)) {
             last_error_ = "Audio init failed: " + audio_.lastError();
+            LOG_ERROR("PlayerEngine", last_error_);
             return false;
         }
         has_audio = true;
@@ -76,6 +78,7 @@ bool PlayerEngine::prepare(const std::string& url) {
     if (demuxer_.videoIndex() >= 0) {
         if (!video_.init(demuxer_.context(), demuxer_.videoIndex(), demuxer_.videoTimeBase())) {
             last_error_ = "Video init failed: " + video_.lastError();
+            LOG_ERROR("PlayerEngine", last_error_);
             return false;
         }
         has_video = true;
@@ -84,16 +87,19 @@ bool PlayerEngine::prepare(const std::string& url) {
     //这里我们只要两个都成功,只要有一个没有成功就算失败
     if (!has_audio && !has_video) {
         last_error_ = "No audio or video stream found";
+        LOG_ERROR("PlayerEngine", last_error_);
         return false;
     }
 
     prepared_ = true;
+    LOG_INFO("PlayerEngine", "prepare success audio=" << has_audio << " video=" << has_video);
     return true;
 }
 
 bool PlayerEngine::play() {
     if (!prepared_) {
         last_error_ = "not prepared";
+        LOG_ERROR("PlayerEngine", last_error_);
         return false;
     }
 
@@ -109,6 +115,7 @@ bool PlayerEngine::play() {
     pool_.add_task([this] { demuxer_.readLoop(abort_, audio_packets_, video_packets_); });
     pool_.add_task([this] { audio_.decodeLoop(abort_, audio_packets_); });
     pool_.add_task([this] { video_.decodeLoop(abort_, video_packets_, video_frames_); });
+    LOG_INFO("PlayerEngine", "play started");
     return true;
 }
 
@@ -119,6 +126,7 @@ void PlayerEngine::pause() {
     paused_.store(true);
     audio_.setPaused(true);
     clock_.pause();
+    LOG_INFO("PlayerEngine", "pause");
 }
 
 void PlayerEngine::resume() {
@@ -128,6 +136,7 @@ void PlayerEngine::resume() {
     paused_.store(false);
     audio_.setPaused(false);
     clock_.resume();
+    LOG_INFO("PlayerEngine", "resume");
 }
 
 void PlayerEngine::togglePause() {
@@ -142,6 +151,7 @@ void PlayerEngine::setSpeed(double speed) {
     if (speed <= 0.0) return;
     clock_.setSpeed(speed);
     audio_.setSpeed(speed);
+    LOG_INFO("PlayerEngine", "set speed to " << speed);
 }
 
 double PlayerEngine::getSpeed() const {
@@ -158,7 +168,7 @@ bool PlayerEngine::seekTo(double target_seconds) {
     if (duration > 0.0) {
         clamped_target = std::min(clamped_target, duration);
     }
-    std::cout << "\nseek target: " << clamped_target << "s";
+    LOG_INFO("PlayerEngine", "seek target " << clamped_target << "s");
 
     const bool was_paused = paused_.load();
     pause();
@@ -169,7 +179,7 @@ bool PlayerEngine::seekTo(double target_seconds) {
 
     if (!demuxer_.seekSeconds(clamped_target)) {
         last_error_ = demuxer_.lastError();
-        std::cout << "\nseek failed: " << last_error_;
+        LOG_ERROR("PlayerEngine", "seek failed: " << last_error_);
         if (!was_paused) {
             resume();
         }
@@ -183,7 +193,7 @@ bool PlayerEngine::seekTo(double target_seconds) {
     if (!was_paused) {
         resume();
     }
-    std::cout << "\nseek done";
+    LOG_INFO("PlayerEngine", "seek done");
 
     return true;
 }
@@ -216,22 +226,13 @@ void PlayerEngine::run() {
                 } else if (ev.key.key == SDLK_SPACE) {
                     togglePause();
                 } else if (ev.key.key == SDLK_UP) {
-                    double  speed = 0;
-                    setSpeed(speed = std::min(2.0,getSpeed() + 0.5));
-                    std::cout << "\r" << std::string(50, ' ') << "\r";
-                    std::cout.flush();
-                    std::cout << "current speed: " << speed;
+                    const double speed = std::min(2.0, getSpeed() + 0.5);
+                    setSpeed(speed);
                 } else if (ev.key.key == SDLK_DOWN) {
-                    double  speed = 0;
-                    std::cout << "\r" << std::string(50, ' ') << "\r";
-                    std::cout.flush();
-                    setSpeed(speed = std::max(0.50, getSpeed() - 0.50));
-                    std::cout << "current speed: " << speed;
+                    const double speed = std::max(0.50, getSpeed() - 0.50);
+                    setSpeed(speed);
                 } else if (ev.key.key == SDLK_R) {
                     setSpeed(1.0);
-                    std::cout << "\r" << std::string(50, ' ') << "\r";
-                    std::cout.flush();
-                    std::cout << "current speed: " << 1.0;
                 } else if (ev.key.key == SDLK_RIGHT) {
                     seekBy(10.0);
                 } else if (ev.key.key == SDLK_LEFT) {
@@ -260,10 +261,12 @@ void PlayerEngine::run() {
         if (!video_inited) {
             if (!video_output_->ensureInit(vf->frame->width, vf->frame->height)) {
                 last_error_ = video_output_->lastError();
+                LOG_ERROR("PlayerEngine", "video output init failed: " << last_error_);
                 stop();
                 break;
             }
             video_inited = true;
+            LOG_INFO("PlayerEngine", "video output initialized " << vf->frame->width << "x" << vf->frame->height);
         }
 
         // 视频 PTS 明显落后于音频时丢帧，直到追上或队列暂时为空（解码慢时靠丢帧跟上）
@@ -277,6 +280,7 @@ void PlayerEngine::run() {
                 if (delay_vs_audio >= -kVideoLateDropSeconds) {
                     break;
                 }
+                LOG_DEBUG("PlayerEngine", "drop late frame pts=" << vf->pts_seconds << " delay=" << delay_vs_audio);
                 vf.reset();
                 if (!video_frames_.popFor(vf, 0)) {
                     need_more_frames = true;
@@ -323,7 +327,7 @@ void PlayerEngine::run() {
 }
 
 void PlayerEngine::stop() {
-    running_.store(false);
+    const bool was_running = running_.exchange(false);
     abort_.store(true);
     paused_.store(false);
     
@@ -336,6 +340,9 @@ void PlayerEngine::stop() {
     video_output_->destroy();
     audio_.close();
     demuxer_.close();
+    if (was_running) {
+        LOG_INFO("PlayerEngine", "stop");
+    }
 }
 
 bool PlayerEngine::isRunning() const {

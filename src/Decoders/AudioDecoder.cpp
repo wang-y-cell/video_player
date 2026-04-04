@@ -1,4 +1,5 @@
 #include "AudioDecoder.hpp"
+#include "Logger.hpp"
 #include <thread>
 #include <chrono>
 #include <algorithm>
@@ -19,6 +20,7 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
 
     if (!fmt || stream_index < 0 || stream_index >= static_cast<int>(fmt->nb_streams)) {
         last_error_ = "invalid audio stream";
+        LOG_ERROR("AudioDecoder", last_error_);
         return false;
     }
 
@@ -26,24 +28,28 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
     const AVCodec* codec = avcodec_find_decoder(st->codecpar->codec_id);
     if (!codec) {
         last_error_ = "audio decoder not found";
+        LOG_ERROR("AudioDecoder", last_error_);
         return false;
     }
 
     codec_ctx_ = avcodec_alloc_context3(codec);
     if (!codec_ctx_) {
         last_error_ = "avcodec_alloc_context3 failed";
+        LOG_ERROR("AudioDecoder", last_error_);
         return false;
     }
 
     int ret = avcodec_parameters_to_context(codec_ctx_, st->codecpar);
     if (ret < 0) {
         last_error_ = ff::errStr(ret);
+        LOG_ERROR("AudioDecoder", "avcodec_parameters_to_context failed: " << last_error_);
         return false;
     }
 
     ret = avcodec_open2(codec_ctx_, codec, nullptr);
     if (ret < 0) {
         last_error_ = ff::errStr(ret);
+        LOG_ERROR("AudioDecoder", "avcodec_open2 failed: " << last_error_);
         return false;
     }
     
@@ -93,6 +99,7 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
     ret = swr_alloc_set_opts2(&swr_ctx_, &out_ch_layout_, out_sample_fmt_, out_rate_, &in_ch_layout_, in_sample_fmt, in_rate, 0, nullptr);
     if (ret < 0) {
         last_error_ = ff::errStr(ret);
+        LOG_ERROR("AudioDecoder", "swr_alloc_set_opts2 failed: " << last_error_);
         return false;
     }
 
@@ -100,17 +107,20 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
     ret = swr_init(swr_ctx_);
     if (ret < 0) {
         last_error_ = ff::errStr(ret);
+        LOG_ERROR("AudioDecoder", "swr_init failed: " << last_error_);
         return false;
     }
 
     //是否打开输出设备
     if (!output_) {
         last_error_ = "audio output not set";
+        LOG_ERROR("AudioDecoder", last_error_);
         return false;
     }
 
     if (!output_->init(out_rate_, out_channels_)) {
         last_error_ = output_->lastError();
+        LOG_ERROR("AudioDecoder", "audio output init failed: " << last_error_);
         return false;
     }
 
@@ -119,6 +129,7 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
     if (mediator_) {
         mediator_->Notify(this, "AudioReady");
     }
+    LOG_INFO("AudioDecoder", "init success rate=" << out_rate_ << " channels=" << out_channels_);
     return true;
 }
 
@@ -126,8 +137,10 @@ void AudioDecoder::setPaused(bool paused) {
     if (output_) {
         if (paused) {
             output_->pause();
+            LOG_INFO("AudioDecoder", "pause output");
         } else {
             output_->resume();
+            LOG_INFO("AudioDecoder", "resume output");
         }
     }
 }
@@ -135,6 +148,7 @@ void AudioDecoder::setPaused(bool paused) {
 void AudioDecoder::setSpeed(double speed) {
     if (output_) {
         output_->setSpeed(speed);
+        LOG_INFO("AudioDecoder", "set speed to " << speed);
     }
 }
 
@@ -149,6 +163,7 @@ void AudioDecoder::flush() {
     if (output_) {
         output_->flush();
     }
+    LOG_INFO("AudioDecoder", "flush");
 }
 
 void AudioDecoder::close() {
@@ -169,11 +184,13 @@ void AudioDecoder::close() {
     out_channels_ = 0;
     bytes_per_second_ = 0;
     last_error_.clear();
+    LOG_INFO("AudioDecoder", "close");
 }
 
 void AudioDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::PacketPtr>& packets) {
     ff::FramePtr frame = ff::makeFrame();
     int64_t fallback_samples = 0;
+    int log_counter = 0;
     constexpr double kMaxQueuedSeconds = 0.25;
     constexpr double kMaxClockCompSeconds = 0.25;
     constexpr double kStartupClockCompSeconds = 0.05;
@@ -266,6 +283,9 @@ void AudioDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
                             } else {
                                 clock_->setAudioClock(std::max(current_clock, target_clock));
                             }
+                        }
+                        if ((++log_counter % 200) == 0) {
+                            LOG_DEBUG("AudioDecoder", "queued_bytes=" << buffered_bytes << " pts=" << pts_seconds << " target_clock=" << target_clock);
                         }
                     }
                 }

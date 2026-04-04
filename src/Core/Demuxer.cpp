@@ -1,4 +1,5 @@
 #include "Demuxer.hpp"
+#include "Logger.hpp"
 #include <chrono>
 #include <thread>
 
@@ -9,16 +10,19 @@ Demuxer::~Demuxer() {
 bool Demuxer::open(const std::string& url) {
     close();    //将之前打开的上下文关闭,并初始化
     avformat_network_init();
+    LOG_INFO("Demuxer", "open input: " << url);
 
     const int ret = avformat_open_input(&fmt_ctx_, url.c_str(), nullptr, nullptr);
     if (ret < 0) {
         last_error_ = ff::errStr(ret);
+        LOG_ERROR("Demuxer", "avformat_open_input failed: " << last_error_);
         return false;
     }
 
     const int info_ret = avformat_find_stream_info(fmt_ctx_, nullptr);
     if (info_ret < 0) {
         last_error_ = ff::errStr(info_ret);
+        LOG_ERROR("Demuxer", "avformat_find_stream_info failed: " << last_error_);
         return false;
     }
 
@@ -31,6 +35,7 @@ bool Demuxer::open(const std::string& url) {
     if (video_index_ >= 0) {
         video_time_base_ = fmt_ctx_->streams[video_index_]->time_base;
     }
+    LOG_INFO("Demuxer", "stream ready audio_index=" << audio_index_ << " video_index=" << video_index_);
 
     if (mediator_) {
         mediator_->Notify(this, "StreamReady");
@@ -73,6 +78,7 @@ void Demuxer::readLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::PacketPtr>& 
                 continue;
             }
             eof_state = true;
+            LOG_INFO("Demuxer", "read loop reached eof");
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             continue;
         }
@@ -93,6 +99,7 @@ bool Demuxer::seekSeconds(double target_seconds) {
     std::lock_guard<std::mutex> lock(io_mutex_);
     if (!fmt_ctx_) {
         last_error_ = "format context is null";
+        LOG_ERROR("Demuxer", "seek failed: " << last_error_);
         return false;
     }
     if (target_seconds < 0.0) {
@@ -100,17 +107,20 @@ bool Demuxer::seekSeconds(double target_seconds) {
     }
 
     const int64_t seek_target = static_cast<int64_t>(target_seconds * static_cast<double>(AV_TIME_BASE));
+    LOG_INFO("Demuxer", "seek to " << target_seconds << "s");
     int ret = av_seek_frame(fmt_ctx_, -1, seek_target, AVSEEK_FLAG_BACKWARD);
     if (ret < 0) {
         ret = av_seek_frame(fmt_ctx_, -1, seek_target, 0);
     }
     if (ret < 0) {
         last_error_ = ff::errStr(ret);
+        LOG_ERROR("Demuxer", "av_seek_frame failed: " << last_error_);
         return false;
     }
 
     avformat_flush(fmt_ctx_);
     seek_generation_.fetch_add(1);
+    LOG_INFO("Demuxer", "seek success");
     return true;
 }
 

@@ -1,4 +1,5 @@
 #include "Clock.hpp"
+#include "Logger.hpp"
 #include <chrono>
 
 int64_t Clock::nowUs() {
@@ -12,6 +13,7 @@ void Clock::reset() {
     last_update_us_.store(0);
     speed_.store(1.0);
     paused_.store(false);
+    LOG_INFO("Clock", "reset");
 }
 
 void Clock::setAudioClock(double pts_seconds) {
@@ -22,6 +24,7 @@ void Clock::setAudioClock(double pts_seconds) {
 void Clock::setAudioClockUnsynced(double pts_seconds) {
     audio_pts_seconds_.store(pts_seconds);
     last_update_us_.store(0);
+    LOG_INFO("Clock", "set unsynced clock to " << pts_seconds);
 }
 
 bool Clock::audioClockSynced() const {
@@ -47,6 +50,7 @@ void Clock::setSpeed(double speed) {
     double current = getAudioClock();
     setAudioClock(current);
     speed_.store(speed);
+    LOG_INFO("Clock", "set speed to " << speed);
 }
 
 double Clock::getSpeed() const {
@@ -59,6 +63,7 @@ void Clock::pause() {
     double current = getAudioClock();
     paused_.store(true);
     setAudioClock(current);
+    LOG_INFO("Clock", "pause at " << current);
 }
 
 void Clock::resume() {
@@ -66,4 +71,5 @@ void Clock::resume() {
     paused_.store(false);
     // 恢复时，重置时间基准为当前物理时间，防止时间跳跃
     last_update_us_.store(nowUs());
+    LOG_INFO("Clock", "resume");
 }

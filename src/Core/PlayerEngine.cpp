@@ -58,7 +58,7 @@ bool PlayerEngine::prepare(const std::string& url) {
     //打开解封装器
     if (!demuxer_.open(url)) {
         last_error_ = demuxer_.lastError();
-        LOG_ERROR("PlayerEngine", "prepare failed to open input: " << last_error_);
+        LOG_ERROR("PlayerEngine", "准备阶段打开输入失败: " << last_error_);
         return false;
     }
 
@@ -66,7 +66,7 @@ bool PlayerEngine::prepare(const std::string& url) {
     bool has_audio = false;
     if (demuxer_.audioIndex() >= 0) {
         if (!audio_.init(demuxer_.context(), demuxer_.audioIndex(), demuxer_.audioTimeBase(), &clock_)) {
-            last_error_ = "Audio init failed: " + audio_.lastError();
+            last_error_ = "音频初始化失败: " + audio_.lastError();
             LOG_ERROR("PlayerEngine", last_error_);
             return false;
         }
@@ -77,7 +77,7 @@ bool PlayerEngine::prepare(const std::string& url) {
     bool has_video = false;
     if (demuxer_.videoIndex() >= 0) {
         if (!video_.init(demuxer_.context(), demuxer_.videoIndex(), demuxer_.videoTimeBase())) {
-            last_error_ = "Video init failed: " + video_.lastError();
+            last_error_ = "视频初始化失败: " + video_.lastError();
             LOG_ERROR("PlayerEngine", last_error_);
             return false;
         }
@@ -86,19 +86,19 @@ bool PlayerEngine::prepare(const std::string& url) {
 
     //这里我们只要两个都成功,只要有一个没有成功就算失败
     if (!has_audio && !has_video) {
-        last_error_ = "No audio or video stream found";
+        last_error_ = "未找到音频流或视频流";
         LOG_ERROR("PlayerEngine", last_error_);
         return false;
     }
 
     prepared_ = true;
-    LOG_INFO("PlayerEngine", "prepare success audio=" << has_audio << " video=" << has_video);
+    LOG_INFO("PlayerEngine", "准备完成，音频流=" << has_audio << "，视频流=" << has_video);
     return true;
 }
 
 bool PlayerEngine::play() {
     if (!prepared_) {
-        last_error_ = "not prepared";
+        last_error_ = "播放器尚未准备完成";
         LOG_ERROR("PlayerEngine", last_error_);
         return false;
     }
@@ -115,7 +115,7 @@ bool PlayerEngine::play() {
     pool_.add_task([this] { demuxer_.readLoop(abort_, audio_packets_, video_packets_); });
     pool_.add_task([this] { audio_.decodeLoop(abort_, audio_packets_); });
     pool_.add_task([this] { video_.decodeLoop(abort_, video_packets_, video_frames_); });
-    LOG_INFO("PlayerEngine", "play started");
+    LOG_INFO("PlayerEngine", "开始播放");
     return true;
 }
 
@@ -126,7 +126,7 @@ void PlayerEngine::pause() {
     paused_.store(true);
     audio_.setPaused(true);
     clock_.pause();
-    LOG_INFO("PlayerEngine", "pause");
+    LOG_INFO("PlayerEngine", "暂停播放");
 }
 
 void PlayerEngine::resume() {
@@ -136,7 +136,7 @@ void PlayerEngine::resume() {
     paused_.store(false);
     audio_.setPaused(false);
     clock_.resume();
-    LOG_INFO("PlayerEngine", "resume");
+    LOG_INFO("PlayerEngine", "恢复播放");
 }
 
 void PlayerEngine::togglePause() {
@@ -151,7 +151,7 @@ void PlayerEngine::setSpeed(double speed) {
     if (speed <= 0.0) return;
     clock_.setSpeed(speed);
     audio_.setSpeed(speed);
-    LOG_INFO("PlayerEngine", "set speed to " << speed);
+    LOG_INFO("PlayerEngine", "设置播放速度为 " << speed);
 }
 
 double PlayerEngine::getSpeed() const {
@@ -168,7 +168,7 @@ bool PlayerEngine::seekTo(double target_seconds) {
     if (duration > 0.0) {
         clamped_target = std::min(clamped_target, duration);
     }
-    LOG_INFO("PlayerEngine", "seek target " << clamped_target << "s");
+    LOG_INFO("PlayerEngine", "准备跳转到 " << clamped_target << " 秒");
 
     const bool was_paused = paused_.load();
     pause();
@@ -179,7 +179,7 @@ bool PlayerEngine::seekTo(double target_seconds) {
 
     if (!demuxer_.seekSeconds(clamped_target)) {
         last_error_ = demuxer_.lastError();
-        LOG_ERROR("PlayerEngine", "seek failed: " << last_error_);
+        LOG_ERROR("PlayerEngine", "跳转失败: " << last_error_);
         if (!was_paused) {
             resume();
         }
@@ -193,7 +193,7 @@ bool PlayerEngine::seekTo(double target_seconds) {
     if (!was_paused) {
         resume();
     }
-    LOG_INFO("PlayerEngine", "seek done");
+    LOG_INFO("PlayerEngine", "跳转完成");
 
     return true;
 }
@@ -261,12 +261,12 @@ void PlayerEngine::run() {
         if (!video_inited) {
             if (!video_output_->ensureInit(vf->frame->width, vf->frame->height)) {
                 last_error_ = video_output_->lastError();
-                LOG_ERROR("PlayerEngine", "video output init failed: " << last_error_);
+                LOG_ERROR("PlayerEngine", "视频输出初始化失败: " << last_error_);
                 stop();
                 break;
             }
             video_inited = true;
-            LOG_INFO("PlayerEngine", "video output initialized " << vf->frame->width << "x" << vf->frame->height);
+            LOG_INFO("PlayerEngine", "视频输出初始化完成，分辨率=" << vf->frame->width << "x" << vf->frame->height);
         }
 
         // 视频 PTS 明显落后于音频时丢帧，直到追上或队列暂时为空（解码慢时靠丢帧跟上）
@@ -280,7 +280,7 @@ void PlayerEngine::run() {
                 if (delay_vs_audio >= -kVideoLateDropSeconds) {
                     break;
                 }
-                LOG_DEBUG("PlayerEngine", "drop late frame pts=" << vf->pts_seconds << " delay=" << delay_vs_audio);
+                LOG_DEBUG("PlayerEngine", "丢弃延迟视频帧，pts=" << vf->pts_seconds << "，音视频差值=" << delay_vs_audio);
                 vf.reset();
                 if (!video_frames_.popFor(vf, 0)) {
                     need_more_frames = true;
@@ -341,7 +341,7 @@ void PlayerEngine::stop() {
     audio_.close();
     demuxer_.close();
     if (was_running) {
-        LOG_INFO("PlayerEngine", "stop");
+        LOG_INFO("PlayerEngine", "停止播放");
     }
 }
 

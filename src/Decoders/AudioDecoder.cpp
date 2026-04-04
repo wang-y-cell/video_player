@@ -19,7 +19,7 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
     time_base_ = time_base;
 
     if (!fmt || stream_index < 0 || stream_index >= static_cast<int>(fmt->nb_streams)) {
-        last_error_ = "invalid audio stream";
+        last_error_ = "无效的音频流";
         LOG_ERROR("AudioDecoder", last_error_);
         return false;
     }
@@ -27,14 +27,14 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
     AVStream* st = fmt->streams[stream_index];
     const AVCodec* codec = avcodec_find_decoder(st->codecpar->codec_id);
     if (!codec) {
-        last_error_ = "audio decoder not found";
+        last_error_ = "未找到音频解码器";
         LOG_ERROR("AudioDecoder", last_error_);
         return false;
     }
 
     codec_ctx_ = avcodec_alloc_context3(codec);
     if (!codec_ctx_) {
-        last_error_ = "avcodec_alloc_context3 failed";
+        last_error_ = "分配音频解码上下文失败";
         LOG_ERROR("AudioDecoder", last_error_);
         return false;
     }
@@ -42,14 +42,14 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
     int ret = avcodec_parameters_to_context(codec_ctx_, st->codecpar);
     if (ret < 0) {
         last_error_ = ff::errStr(ret);
-        LOG_ERROR("AudioDecoder", "avcodec_parameters_to_context failed: " << last_error_);
+        LOG_ERROR("AudioDecoder", "复制音频解码参数失败: " << last_error_);
         return false;
     }
 
     ret = avcodec_open2(codec_ctx_, codec, nullptr);
     if (ret < 0) {
         last_error_ = ff::errStr(ret);
-        LOG_ERROR("AudioDecoder", "avcodec_open2 failed: " << last_error_);
+        LOG_ERROR("AudioDecoder", "打开音频解码器失败: " << last_error_);
         return false;
     }
     
@@ -99,7 +99,7 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
     ret = swr_alloc_set_opts2(&swr_ctx_, &out_ch_layout_, out_sample_fmt_, out_rate_, &in_ch_layout_, in_sample_fmt, in_rate, 0, nullptr);
     if (ret < 0) {
         last_error_ = ff::errStr(ret);
-        LOG_ERROR("AudioDecoder", "swr_alloc_set_opts2 failed: " << last_error_);
+        LOG_ERROR("AudioDecoder", "分配重采样参数失败: " << last_error_);
         return false;
     }
 
@@ -107,20 +107,20 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
     ret = swr_init(swr_ctx_);
     if (ret < 0) {
         last_error_ = ff::errStr(ret);
-        LOG_ERROR("AudioDecoder", "swr_init failed: " << last_error_);
+        LOG_ERROR("AudioDecoder", "初始化重采样器失败: " << last_error_);
         return false;
     }
 
     //是否打开输出设备
     if (!output_) {
-        last_error_ = "audio output not set";
+        last_error_ = "音频输出设备未设置";
         LOG_ERROR("AudioDecoder", last_error_);
         return false;
     }
 
     if (!output_->init(out_rate_, out_channels_)) {
         last_error_ = output_->lastError();
-        LOG_ERROR("AudioDecoder", "audio output init failed: " << last_error_);
+        LOG_ERROR("AudioDecoder", "音频输出初始化失败: " << last_error_);
         return false;
     }
 
@@ -129,7 +129,7 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
     if (mediator_) {
         mediator_->Notify(this, "AudioReady");
     }
-    LOG_INFO("AudioDecoder", "init success rate=" << out_rate_ << " channels=" << out_channels_);
+    LOG_INFO("AudioDecoder", "初始化成功，采样率=" << out_rate_ << "，声道数=" << out_channels_);
     return true;
 }
 
@@ -137,10 +137,10 @@ void AudioDecoder::setPaused(bool paused) {
     if (output_) {
         if (paused) {
             output_->pause();
-            LOG_INFO("AudioDecoder", "pause output");
+            LOG_INFO("AudioDecoder", "暂停音频输出");
         } else {
             output_->resume();
-            LOG_INFO("AudioDecoder", "resume output");
+            LOG_INFO("AudioDecoder", "恢复音频输出");
         }
     }
 }
@@ -148,7 +148,7 @@ void AudioDecoder::setPaused(bool paused) {
 void AudioDecoder::setSpeed(double speed) {
     if (output_) {
         output_->setSpeed(speed);
-        LOG_INFO("AudioDecoder", "set speed to " << speed);
+        LOG_INFO("AudioDecoder", "设置音频播放速度为 " << speed);
     }
 }
 
@@ -163,7 +163,7 @@ void AudioDecoder::flush() {
     if (output_) {
         output_->flush();
     }
-    LOG_INFO("AudioDecoder", "flush");
+    LOG_INFO("AudioDecoder", "清空音频缓冲区");
 }
 
 void AudioDecoder::close() {
@@ -184,7 +184,7 @@ void AudioDecoder::close() {
     out_channels_ = 0;
     bytes_per_second_ = 0;
     last_error_.clear();
-    LOG_INFO("AudioDecoder", "close");
+    LOG_INFO("AudioDecoder", "关闭音频解码器");
 }
 
 void AudioDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::PacketPtr>& packets) {
@@ -285,7 +285,7 @@ void AudioDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
                             }
                         }
                         if ((++log_counter % 200) == 0) {
-                            LOG_DEBUG("AudioDecoder", "queued_bytes=" << buffered_bytes << " pts=" << pts_seconds << " target_clock=" << target_clock);
+                            LOG_DEBUG("AudioDecoder", "当前缓冲字节数=" << buffered_bytes << "，pts=" << pts_seconds << "，目标时钟=" << target_clock);
                         }
                     }
                 }

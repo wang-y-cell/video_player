@@ -11,7 +11,7 @@ bool VideoDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
     time_base_ = time_base;
 
     if (!fmt || stream_index < 0 || stream_index >= static_cast<int>(fmt->nb_streams)) {
-        last_error_ = "invalid video stream";
+        last_error_ = "无效的视频流";
         LOG_ERROR("VideoDecoder", last_error_);
         return false;
     }
@@ -19,14 +19,14 @@ bool VideoDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
     AVStream* st = fmt->streams[stream_index];
     const AVCodec* codec = avcodec_find_decoder(st->codecpar->codec_id);
     if (!codec) {
-        last_error_ = "video decoder not found";
+        last_error_ = "未找到视频解码器";
         LOG_ERROR("VideoDecoder", last_error_);
         return false;
     }
 
     codec_ctx_ = avcodec_alloc_context3(codec);
     if (!codec_ctx_) {
-        last_error_ = "avcodec_alloc_context3 failed";
+        last_error_ = "分配视频解码上下文失败";
         LOG_ERROR("VideoDecoder", last_error_);
         return false;
     }
@@ -34,14 +34,14 @@ bool VideoDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
     int ret = avcodec_parameters_to_context(codec_ctx_, st->codecpar);
     if (ret < 0) {
         last_error_ = ff::errStr(ret);
-        LOG_ERROR("VideoDecoder", "avcodec_parameters_to_context failed: " << last_error_);
+        LOG_ERROR("VideoDecoder", "复制视频解码参数失败: " << last_error_);
         return false;
     }
 
     ret = avcodec_open2(codec_ctx_, codec, nullptr);
     if (ret < 0) {
         last_error_ = ff::errStr(ret);
-        LOG_ERROR("VideoDecoder", "avcodec_open2 failed: " << last_error_);
+        LOG_ERROR("VideoDecoder", "打开视频解码器失败: " << last_error_);
         return false;
     }
 
@@ -51,7 +51,7 @@ bool VideoDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
     if (mediator_) {
         mediator_->Notify(this, "VideoReady");
     }
-    LOG_INFO("VideoDecoder", "init success width=" << width_ << " height=" << height_);
+    LOG_INFO("VideoDecoder", "初始化成功，宽度=" << width_ << "，高度=" << height_);
     return true;
 }
 
@@ -75,7 +75,7 @@ void VideoDecoder::close() {
     width_ = 0;
     height_ = 0;
     last_error_.clear();
-    LOG_INFO("VideoDecoder", "close");
+    LOG_INFO("VideoDecoder", "关闭视频解码器");
 }
 
 void VideoDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::PacketPtr>& packets, SafeQueue<VideoFramePtr>& frames) {
@@ -115,7 +115,7 @@ void VideoDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
                 sws_ctx_ = sws_getContext(codec_ctx_->width, codec_ctx_->height, codec_ctx_->pix_fmt, codec_ctx_->width, codec_ctx_->height,
                                           AV_PIX_FMT_YUV420P, SWS_BILINEAR, nullptr, nullptr, nullptr);
                 if (!sws_ctx_) {
-                    LOG_ERROR("VideoDecoder", "sws_getContext failed");
+                    LOG_ERROR("VideoDecoder", "创建像素格式转换上下文失败");
                     av_frame_unref(frame.get());
                     continue;
                 }
@@ -128,7 +128,7 @@ void VideoDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
             //为已设置好格式/尺寸的AVFrame分配实际的数据缓冲区,
             //32表示对齐字节数,一般设为32即可
             if (av_frame_get_buffer(yuv, 32) < 0) {
-                LOG_ERROR("VideoDecoder", "av_frame_get_buffer failed");
+                LOG_ERROR("VideoDecoder", "为视频帧分配缓冲区失败");
                 av_frame_free(&yuv);
                 av_frame_unref(frame.get());
                 continue;
@@ -144,7 +144,7 @@ void VideoDecoder::decodeLoop(std::atomic<bool>& abort_flag, SafeQueue<ff::Packe
             //就等待10ms,等播放器处理完一些帧
             while (!abort_flag.load() && frames.size() > 20) {
                 if ((++log_counter % 50) == 0) {
-                    LOG_DEBUG("VideoDecoder", "frame queue backlog size=" << frames.size());
+                    LOG_DEBUG("VideoDecoder", "视频帧队列积压，当前队列大小=" << frames.size());
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }

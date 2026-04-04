@@ -1,4 +1,4 @@
-#include <cstdarg>
+#include <cstdarg> //处理可变参数
 #include <cstdio>
 #include <filesystem>
 #include <string>
@@ -23,6 +23,7 @@ void ffmpegLogCallback(void*, int level, const char* fmt, va_list args) {
 
 int main(int argc, char** argv) {
     auto& logger = Logger::instance();
+    logger.enableConsole(false);
 #ifdef NDEBUG
     logger.setLevel(Logger::Level::Info);
     av_log_set_level(AV_LOG_INFO);
@@ -33,20 +34,20 @@ int main(int argc, char** argv) {
     const std::filesystem::path executable_path(argv[0]);
     const std::filesystem::path log_path = (executable_path.parent_path() / ".." / "logs" / "player.log").lexically_normal();
     if (!logger.setFile(log_path.string())) {
-        LOG_WARN("Main", "open log file failed: " << log_path.string());
+        LOG_WARN("Main", "打开日志文件失败: " << log_path.string());
     }
     av_log_set_callback(ffmpegLogCallback);
 
     if (argc < 2) {
-        LOG_ERROR("Main", "usage: " << argv[0] << " <input>");
+        LOG_ERROR("Main", "用法: " << argv[0] << " <输入文件>");
         return 1;
     }
 
     const std::string input = argv[1];
-    LOG_INFO("Main", "start player with input: " << input);
+    LOG_INFO("Main", "启动播放器，输入文件: " << input);
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS)) {
-        LOG_ERROR("Main", "SDL_Init failed: " << SDL_GetError());
+        LOG_ERROR("Main", "SDL 初始化失败: " << SDL_GetError());
         return 1;
     }
 
@@ -54,12 +55,12 @@ int main(int argc, char** argv) {
         thread_pool pool(4);
         PlayerEngine engine(pool);
         if (!engine.prepare(input)) {
-            LOG_ERROR("Main", "prepare failed: " << engine.lastError());
+            LOG_ERROR("Main", "播放器准备失败: " << engine.lastError());
             SDL_Quit();
             return 1;
         }
         if (!engine.play()) {
-            LOG_ERROR("Main", "play failed: " << engine.lastError());
+            LOG_ERROR("Main", "播放器启动失败: " << engine.lastError());
             SDL_Quit();
             return 1;
         }
@@ -67,7 +68,7 @@ int main(int argc, char** argv) {
     }
 
     SDL_Quit();
-    LOG_INFO("Main", "player exited");
+    LOG_INFO("Main", "播放器已退出");
     logger.closeFile();
     return 0;
 }

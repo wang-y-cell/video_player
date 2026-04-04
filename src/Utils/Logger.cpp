@@ -11,6 +11,7 @@ extern "C" {
 }
 
 namespace {
+    //清理日志消息中的换行符
 std::string trimMessage(const std::string& input) {
     std::string result = input;
     while (!result.empty() && (result.back() == '\n' || result.back() == '\r')) {
@@ -19,6 +20,7 @@ std::string trimMessage(const std::string& input) {
     return result;
 }
 
+//显示当前时间
 std::string buildTimestamp() {
     using namespace std::chrono;
     const auto now = system_clock::now();

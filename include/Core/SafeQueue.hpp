@@ -21,15 +21,17 @@ public:
     SafeQueue(const SafeQueue&) = delete;
     SafeQueue& operator=(const SafeQueue&) = delete;
 
+    //push 一个元素到队列的末尾,期间使用加锁,确保线程安全,当成功push一个元素之后,我们提醒一个正在等待
+    //的pop条件变量,唤醒一个解码器线程
     void push(T value) {
         {
             std::lock_guard<std::mutex> lock(mutex_);
-            if (aborted_) {
+            if (aborted_) { // 如果被终止,直接返回
                 return;
             }
-            queue_.push_back(std::move(value));
+            queue_.push_back(std::move(value)); // 移动构造函数,避免拷贝构造函数
         }
-        cv_.notify_one();
+        cv_.notify_one(); // 唤醒一个解码器线程
     }
 
     //只有当解封装器push一个pkt指针,我们才唤醒

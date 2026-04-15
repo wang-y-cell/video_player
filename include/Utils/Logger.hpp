@@ -83,13 +83,13 @@ private:
     std::ofstream file_;
 };
 
-#define LOG_DEBUG(module, message_expr)  \
-    do {  \
-        if (Logger::instance().shouldLog(Logger::Level::Debug)) {                      \
-            std::ostringstream _logger_stream;  \
-            _logger_stream << message_expr;   \
-            Logger::instance().log(Logger::Level::Debug, module, _logger_stream.str());  \
-        }   \
+#define LOG_DEBUG(module, message_expr)                                                                                 \
+    do {                                                                                                                \
+        if (Logger::instance().shouldLog(Logger::Level::Debug)) {                                                       \
+            std::ostringstream _logger_stream;                                                                          \
+            _logger_stream << message_expr;                                                                             \
+            Logger::instance().log(Logger::Level::Debug, module, _logger_stream.str());                                 \
+        }                                                                                                               \
     } while (0)
 
 #define LOG_INFO(module, message_expr)                                                                                   \
@@ -97,7 +97,7 @@ private:
         if (Logger::instance().shouldLog(Logger::Level::Info)) {                                                         \
             std::ostringstream _logger_stream;                                                                           \
             _logger_stream << message_expr;                                                                              \
-            Logger::instance().log(Logger::Level::Info, module, _logger_stream.str());                                  \
+            Logger::instance().log(Logger::Level::Info, module, _logger_stream.str());                                   \
         }                                                                                                                \
     } while (0)
 
@@ -106,7 +106,7 @@ private:
         if (Logger::instance().shouldLog(Logger::Level::Warn)) {                                                         \
             std::ostringstream _logger_stream;                                                                           \
             _logger_stream << message_expr;                                                                              \
-            Logger::instance().log(Logger::Level::Warn, module, _logger_stream.str());                                  \
+            Logger::instance().log(Logger::Level::Warn, module, _logger_stream.str());                                   \
         }                                                                                                                \
     } while (0)
 
@@ -115,6 +115,6 @@ private:
         if (Logger::instance().shouldLog(Logger::Level::Error)) {                                                        \
             std::ostringstream _logger_stream;                                                                           \
             _logger_stream << message_expr;                                                                              \
-            Logger::instance().log(Logger::Level::Error, module, _logger_stream.str());                                 \
+            Logger::instance().log(Logger::Level::Error, module, _logger_stream.str());                                  \
         }                                                                                                                \
     } while (0)

@@ -38,8 +38,8 @@ public:
     const std::string& lastError() const override;
 
 private:
-    AVCodecContext* codec_ctx_ = nullptr;
-    SwsContext* sws_ctx_ = nullptr;
+    AVCodecContext* codec_ctx_ = nullptr; // 解码器上下文
+    SwsContext* sws_ctx_ = nullptr; //负责视频缩放 4k -> 1080p,复杂像素格式转换 yuv -> rgb
     AVRational time_base_{0, 1};
     int width_ = 0;
     int height_ = 0;

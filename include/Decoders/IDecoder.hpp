@@ -2,6 +2,7 @@
 
 #include <string>
 
+//解码器基类
 class IDecoder {
 public:
     virtual ~IDecoder() = default;

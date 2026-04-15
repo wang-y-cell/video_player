@@ -45,15 +45,17 @@ public:
 private:
     thread_pool& pool_;
 
-    Demuxer demuxer_;
-    AudioDecoder audio_;
-    VideoDecoder video_;
+    Demuxer demuxer_; //解封装器
+    AudioDecoder audio_; //音频解码器
+    VideoDecoder video_; //视频解码器
 
-    SafeQueue<ff::PacketPtr> audio_packets_;
-    SafeQueue<ff::PacketPtr> video_packets_;
-    SafeQueue<VideoFramePtr> video_frames_;
+    SafeQueue<ff::PacketPtr> audio_packets_; //存放音频pkt的队列
+    SafeQueue<ff::PacketPtr> video_packets_; //存放视频pkt的队列
+    SafeQueue<VideoFramePtr> video_frames_; //存放视频帧的队列
+    //没有音频队列是因为我们直接播放音频,不需要缓存
 
-    std::unique_ptr<IVideoOutput> video_output_;
+    std::unique_ptr<IVideoOutput> video_output_; //指向播放视频的窗口基类的指针
+    //时钟
     Clock clock_;
 
     //用来终止所有线程的标指

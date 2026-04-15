@@ -4,6 +4,7 @@
 #include <SDL3/SDL.h>
 #include <string>
 
+//音频播放类,继承自IAudioOutput,负责播放音频
 class SDLAudioOutput : public IAudioOutput {
 public:
     SDLAudioOutput() = default;

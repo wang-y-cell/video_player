@@ -54,6 +54,7 @@ int main(int argc, char** argv) {
 
     {
         thread_pool pool(4);
+        //配置中介,设置音频播放方式,视频播放方式
         PlayerEngine engine(pool);
         if (!engine.prepare(input)) {
             LOG_ERROR("Main", "播放器准备失败: " << engine.lastError());

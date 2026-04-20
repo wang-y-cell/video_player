@@ -7,7 +7,7 @@ VideoDecoder::~VideoDecoder() {
 }
 
 bool VideoDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_base) {
-    close();
+    close(); //同音频
     time_base_ = time_base;
 
     if (!fmt || stream_index < 0 || stream_index >= static_cast<int>(fmt->nb_streams)) {
@@ -45,6 +45,7 @@ bool VideoDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
         return false;
     }
 
+    //设置视频的宽高
     width_ = codec_ctx_->width;
     height_ = codec_ctx_->height;
 

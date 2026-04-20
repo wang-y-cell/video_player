@@ -46,6 +46,7 @@ bool AudioDecoder::init(AVFormatContext* fmt, int stream_index, AVRational time_
         return false;
     }
 
+    //打开真正的解码器
     ret = avcodec_open2(codec_ctx_, codec, nullptr);
     if (ret < 0) {
         last_error_ = ff::errStr(ret);
